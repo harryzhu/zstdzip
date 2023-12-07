@@ -1,0 +1,1 @@
+go build -o dist/zstdzip -ldflags "-w -s" main.go
