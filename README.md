@@ -8,6 +8,8 @@ compress:
 ./zstdzip zip --input=/User/harryzhu/docs  --output=/User/harryzhu/docs.zip   --speed=6
 `
 
+--speed= can be 0/1/6/9
+
 decompress:
 
 `
