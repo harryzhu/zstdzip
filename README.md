@@ -7,6 +7,7 @@ compress:
 `
 ./zstdzip zip --input=/User/harryzhu/docs  --output=/User/harryzhu/docs.zip
 `
+
 or:
 
 `
