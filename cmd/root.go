@@ -13,9 +13,10 @@ import (
 )
 
 var (
-	timeBoot time.Time
-	Input    string
-	Output   string
+	timeBoot  time.Time
+	Input     string
+	Output    string
+	LogStatus string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -26,13 +27,22 @@ var rootCmd = &cobra.Command{
 	Decompress: zstdzip unzip --input=abc.zip  --output=/path/of/target/folder
 	or you can use https://github.com/mcmilk/7-Zip-zstd to unzip`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-
+		fmt.Println(" *** start:", timeBoot.Format("15:04:05"), "***")
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		fmt.Println("\n *** elapse:", time.Since(timeBoot), "***")
+		if LogStatus != "" {
+			fmt.Println(" *** global status:", GlobalStatus)
+			result := make(map[string]string, 4)
+			result["status"] = GlobalStatus
+			result["start"] = timeBoot.Format("15:04:05")
+			result["elapse"] = time.Since(timeBoot).String()
+
+			SaveJson(LogStatus+".zstdzip_status.txt", result)
+		}
 	},
 }
 
@@ -55,5 +65,5 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&Input, "input", "", "source file or folder")
 	rootCmd.PersistentFlags().StringVar(&Output, "output", "", "target file")
-
+	rootCmd.PersistentFlags().StringVar(&LogStatus, "logstatus", "", "log Global Status into this file")
 }

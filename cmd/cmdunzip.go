@@ -17,7 +17,7 @@ var unzipCmd = &cobra.Command{
 	Use:   "unzip",
 	Short: "unzip --input=/path/of/file.zip --output=/path/of/extract/folder",
 	Long:  `or you can use https://github.com/mcmilk/7-Zip-zstd to unzip`,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PreRun: func(cmd *cobra.Command, args []string) {
 		if Input == "" {
 			log.Fatal("--input= cannot be empty")
 		} else {

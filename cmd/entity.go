@@ -179,15 +179,15 @@ func (ett *Entity) Decompress() *Entity {
 
 		dst, _ := os.Create(dstPath)
 		funzip, err := fzip.Open()
-		FatalError(err)
+		PrintlnError(err)
 
 		if _, err := io.Copy(dst, funzip); err != nil {
-			FatalError(err)
+			PrintlnError(err)
 		} else {
 			fmt.Println(fzip.Name)
 		}
 		if err := funzip.Close(); err != nil {
-			FatalError(err)
+			PrintlnError(err)
 		}
 		dst.Close()
 	}

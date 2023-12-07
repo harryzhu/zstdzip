@@ -1,15 +1,20 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
 
+var (
+	GlobalStatus string = "ok"
+)
+
 func PrintArgs() {
-	fmt.Println(" *** start:", timeBoot.Format("15:04:05"))
 	fmt.Println("--input=", Input)
 	fmt.Println("--output=", Output)
 	fmt.Println("--speed=", Speed)
@@ -27,12 +32,14 @@ func GetTimeNow() time.Time {
 
 func FatalError(err error) {
 	if err != nil {
+		GlobalStatus = "error"
 		log.Fatal(err)
 	}
 }
 
 func PrintlnError(err error) {
 	if err != nil {
+		GlobalStatus = "error"
 		log.Println(err)
 	}
 }
@@ -41,4 +48,13 @@ func AbsToSlash(s string) string {
 	s, err := filepath.Abs(s)
 	FatalError(err)
 	return strings.TrimRight(filepath.ToSlash(s), "/")
+}
+
+func SaveJson(p string, m map[string]string) {
+	fp, err := os.Create(p)
+	FatalError(err)
+	j, err := json.Marshal(m)
+	FatalError(err)
+	_, err = fp.Write(j)
+	FatalError(err)
 }

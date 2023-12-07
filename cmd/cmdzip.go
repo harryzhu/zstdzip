@@ -14,7 +14,7 @@ var zipCmd = &cobra.Command{
 	Use:   "zip",
 	Short: "zip --input=/path/of/file(or folder) --output=/path/of/target.zip --speed=0|1|6|9",
 	Long:  ``,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PreRun: func(cmd *cobra.Command, args []string) {
 		if Input == "" {
 			log.Fatal("--input= cannot be empty")
 		} else {
