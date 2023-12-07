@@ -15,8 +15,12 @@ or:
 `
 
 --speed=0/1/6/9 : 
+
         0: fastest without compression, 
-        9: slowest with most compression. default is 1
+        
+        9: slowest with most compression. 
+
+        default is 1
 
 --logstatus=/path/of/logfile.txt : log the global result(json format) to a file for monitoring 
 
