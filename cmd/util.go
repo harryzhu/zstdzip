@@ -53,8 +53,12 @@ func AbsToSlash(s string) string {
 func SaveJson(p string, m map[string]string) {
 	fp, err := os.Create(p)
 	FatalError(err)
+
 	j, err := json.Marshal(m)
 	FatalError(err)
+
 	_, err = fp.Write(j)
+	defer fp.Close()
+
 	FatalError(err)
 }
