@@ -17,6 +17,7 @@ var (
 	Input     string
 	Output    string
 	LogStatus string
+	Threads   int
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -28,6 +29,15 @@ var rootCmd = &cobra.Command{
 	or you can use https://github.com/mcmilk/7-Zip-zstd to unzip`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		fmt.Println(" *** start:", timeBoot.Format("15:04:05"), "***")
+		numCPU = runtime.NumCPU()
+
+		if Threads > numCPU || Threads < 1 {
+			numCPU = runtime.NumCPU()
+		} else {
+			numCPU = Threads
+		}
+
+		runtime.GOMAXPROCS(numCPU)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -41,7 +51,7 @@ var rootCmd = &cobra.Command{
 			result["start"] = timeBoot.Format("15:04:05")
 			result["elapse"] = time.Since(timeBoot).String()
 
-			SaveJson(LogStatus+".zstdzip_status.txt", result)
+			SaveJson(LogStatus+".zstdzip.log", result)
 		}
 	},
 }
@@ -56,14 +66,13 @@ func Execute() {
 }
 
 func init() {
-	timeBoot = GetTimeNow()
+	runtime.LockOSThread()
 
-	numCPU = runtime.NumCPU()
-	if numCPU > 32 {
-		numCPU = 32
-	}
+	timeBoot = GetTimeNow()
 
 	rootCmd.PersistentFlags().StringVar(&Input, "input", "", "source file or folder")
 	rootCmd.PersistentFlags().StringVar(&Output, "output", "", "target file")
-	rootCmd.PersistentFlags().StringVar(&LogStatus, "logstatus", "", "log Global Status into this file")
+	rootCmd.PersistentFlags().StringVar(&LogStatus, "log", "", "log Global Status into this file")
+	rootCmd.PersistentFlags().IntVar(&Threads, "threads", 8, "threads")
+
 }
