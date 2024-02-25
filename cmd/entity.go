@@ -190,6 +190,9 @@ func (ett *Entity) Decompress() *Entity {
 			PrintlnError(err)
 		}
 		dst.Close()
+
+		os.Chmod(dstPath, header.FileInfo().Mode())
+		os.Chtimes(dstPath, header.FileInfo().ModTime(), header.FileInfo().ModTime())
 	}
 	return ett
 }
