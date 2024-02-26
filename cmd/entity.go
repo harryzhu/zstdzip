@@ -254,8 +254,8 @@ func (ett *Entity) DecompressAsync() *Entity {
 			os.Chtimes(dstPath, header.FileInfo().ModTime(), header.FileInfo().ModTime())
 
 		}(dstPath, fzip, header)
-
-		wg.Wait()
 	}
+	wg.Wait()
+
 	return ett
 }

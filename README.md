@@ -5,13 +5,13 @@ compress and decompress via ZSTD
 ### compress:
 
 `
-./zstdzip zip --input=/User/harryzhu/docs  --output=/User/harryzhu/docs.zip
+./zstdzip zip --input=/User/harryzhu/docs  --output=/User/harryzhu/docs.zst.zip
 `
 
 or:
 
 `
-./zstdzip zip --input=/User/harryzhu/docs  --output=/User/harryzhu/docs.zip  --speed=6  --threads=16 --log=/User/harryzhu/result.log
+./zstdzip zip --input=/User/harryzhu/docs  --output=/User/harryzhu/docs.zst.zip  --speed=6  --threads=16 --log=/User/harryzhu/result.log
 `
 
 `--speed=0/1/6/9` : 
