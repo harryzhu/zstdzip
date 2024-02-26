@@ -14,7 +14,7 @@ or:
 ./zstdzip zip --input=/User/harryzhu/docs  --output=/User/harryzhu/docs.zip  --speed=6  --threads=16 --log=/User/harryzhu/result.log
 `
 
---speed=0/1/6/9 : 
+`--speed=0/1/6/9` : 
 
         0: fastest without compression, 
 
@@ -25,7 +25,7 @@ or:
         9: best but slowest compression. 
 
 
---log=/path/of/logfile.log : log the global result(json format) to a file for monitoring 
+`--log=/path/of/logfile.log` : log the global result(json format) to a file for monitoring 
 
 ### decompress:
 
@@ -39,7 +39,7 @@ or:
 ./zstdzip unzip --input=/User/harryzhu/test.zip  --output=/User/harryzhu/test --async --threads=32
 `
 
---async : better performance for too many small files decompression, default is false.
+`--async` : better performance for too many small files decompression, default is `false`.
 
 or you can download https://github.com/mcmilk/7-Zip-zstd to unzip
 
