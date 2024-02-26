@@ -30,6 +30,11 @@ decompress:
 ./zstdzip unzip --input=/User/harryzhu/test.zip  --output=/User/harryzhu/test
 `
 
+or:
+
+`
+./zstdzip unzip --input=/User/harryzhu/test.zip  --output=/User/harryzhu/test --async --threads=32
+`
 
 or you can download https://github.com/mcmilk/7-Zip-zstd to unzip
 
