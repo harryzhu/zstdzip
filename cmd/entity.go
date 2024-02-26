@@ -94,7 +94,7 @@ func (ett *Entity) SetZipFileMap() *Entity {
 	} else {
 		fpathSkip := filepath.ToSlash(filepath.Dir(ett.InputFullPath))
 		nameInZip := ""
-		zfp = make(map[string]string, 4096)
+		zfp = make(map[string]string, 8192)
 		var walkFunc = func(p string, info os.FileInfo, err error) error {
 			p = AbsToSlash(p)
 
