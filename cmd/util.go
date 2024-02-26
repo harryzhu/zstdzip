@@ -18,7 +18,8 @@ func PrintArgs() {
 	fmt.Println("--input=", Input)
 	fmt.Println("--output=", Output)
 	fmt.Println("--speed=", Speed)
-	fmt.Println("threads:", numCPU)
+	fmt.Println("--threads:", numCPU)
+	fmt.Println("--async:", Async)
 	fmt.Println(" ")
 }
 

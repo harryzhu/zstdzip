@@ -20,6 +20,7 @@ var (
 	Threads   int
 )
 
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "zstdzip [zip | unzip] [options]",
@@ -30,7 +31,7 @@ var rootCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		fmt.Println(" *** start:", timeBoot.Format("15:04:05"), "***")
 		numCPU = runtime.NumCPU()
-
+		
 		if Threads > numCPU || Threads < 1 {
 			numCPU = runtime.NumCPU()
 		} else {
@@ -66,8 +67,6 @@ func Execute() {
 }
 
 func init() {
-	runtime.LockOSThread()
-
 	timeBoot = GetTimeNow()
 
 	rootCmd.PersistentFlags().StringVar(&Input, "input", "", "source file or folder")

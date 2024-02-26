@@ -12,6 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var(
+	Async bool
+)
+
 // unzipCmd represents the unzip command
 var unzipCmd = &cobra.Command{
 	Use:   "unzip",
@@ -34,12 +38,18 @@ var unzipCmd = &cobra.Command{
 		PrintArgs()
 
 		entity := NewEntity(Input, Output)
-		entity.Decompress()
+		if Async == true{
+			entity.DecompressAsync()
+		}else{
+			entity.Decompress()
+		}
+		
 
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(unzipCmd)
+	unzipCmd.Flags().BoolVarP(&Async, "async", "",false, "unzip files in async mode")
 
 }
