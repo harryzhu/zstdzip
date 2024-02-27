@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"archive/zip"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -117,7 +116,7 @@ func (ett *Entity) Compress() *Entity {
 	var header *zip.FileHeader
 	for abspath, zipname := range ett.ZipFileMap {
 
-		fmt.Println(zipname)
+		PrintlnDebug(zipname)
 
 		finfo, err := os.Stat(abspath)
 		FatalError(err)
@@ -185,7 +184,7 @@ func (ett *Entity) Decompress() *Entity {
 		if _, err := io.Copy(dst, funzip); err != nil {
 			PrintlnError(err)
 		} else {
-			fmt.Println(fzip.Name)
+			PrintlnDebug(fzip.Name)
 		}
 		if err := funzip.Close(); err != nil {
 			PrintlnError(err)
@@ -243,7 +242,7 @@ func (ett *Entity) DecompressAsync() *Entity {
 			if _, err := io.Copy(dst, funzip); err != nil {
 				PrintlnError(err)
 			} else {
-				fmt.Println(fzip.Name)
+				PrintlnDebug(fzip.Name)
 			}
 			if err := funzip.Close(); err != nil {
 				PrintlnError(err)

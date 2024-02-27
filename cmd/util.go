@@ -20,6 +20,7 @@ func PrintArgs() {
 	fmt.Println("--speed=", Speed)
 	fmt.Println("--threads=", numCPU)
 	fmt.Println("--async=", Async)
+	fmt.Println("--debug=", IsDebug)
 	fmt.Println(" ")
 }
 
@@ -42,6 +43,12 @@ func PrintlnError(err error) {
 	if err != nil {
 		GlobalStatus = "error"
 		log.Println(err)
+	}
+}
+
+func PrintlnDebug(s string) {
+	if IsDebug {
+		fmt.Println(s)
 	}
 }
 

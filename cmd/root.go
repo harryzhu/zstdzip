@@ -18,8 +18,8 @@ var (
 	Output    string
 	LogStatus string
 	Threads   int
+	IsDebug   bool
 )
-
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -31,7 +31,7 @@ var rootCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		fmt.Println(" *** start:", timeBoot.Format("15:04:05"), "***")
 		numCPU = runtime.NumCPU()
-		
+
 		if Threads > numCPU || Threads < 1 {
 			numCPU = runtime.NumCPU()
 		} else {
@@ -73,5 +73,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&Output, "output", "", "target file")
 	rootCmd.PersistentFlags().StringVar(&LogStatus, "log", "", "log Global Status into this file")
 	rootCmd.PersistentFlags().IntVar(&Threads, "threads", 8, "threads")
+	rootCmd.PersistentFlags().BoolVarP(&IsDebug, "debug", "", false, "print debug info")
 
 }
