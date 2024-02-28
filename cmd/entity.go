@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -25,13 +26,16 @@ type Entity struct {
 	ZipTempFileHandler *os.File
 	ZipWriter          *zip.Writer
 	UnzipReader        *zip.Reader
+	FileCount          int
+	FileIndex          int
 }
 
 func NewEntity(inpath string, outpath string) *Entity {
 	ett := &Entity{}
 	ett.InputFullPath = inpath
 	ett.OutputFullPath = outpath
-
+	ett.FileCount = 0
+	ett.FileIndex = 0
 	ett.ZipTempFile = strings.Join([]string{ett.OutputFullPath, "ing"}, ".")
 	return ett
 }
@@ -109,17 +113,22 @@ func (ett *Entity) SetZipFileMap() *Entity {
 	}
 
 	ett.ZipFileMap = zfp
+	ett.FileCount = len(ett.ZipFileMap)
 	return ett
 }
 
 func (ett *Entity) Compress() *Entity {
 	var header *zip.FileHeader
+
+	ettFileCount := strconv.Itoa(ett.FileCount)
+	ett.FileIndex = 0
 	for abspath, zipname := range ett.ZipFileMap {
 
 		finfo, err := os.Stat(abspath)
 		FatalError(err)
 
-		PrintSpinner(zipname)
+		ett.FileIndex += 1
+		PrintSpinner(strconv.Itoa(ett.FileIndex) + " / " + ettFileCount)
 
 		fp, err := os.Open(abspath)
 		FatalError(err)
@@ -163,7 +172,11 @@ func (ett *Entity) Decompress() *Entity {
 
 	var dstPath, dstDir string
 
+	ett.FileIndex = 0
 	for _, fzip := range ett.UnzipReader.File {
+		ett.FileIndex += 1
+		PrintSpinner(strconv.Itoa(ett.FileIndex))
+
 		dstPath = filepath.Join(ett.OutputFullPath, fzip.Name)
 		dstPath = filepath.ToSlash(dstPath)
 		dstDir = filepath.Dir(dstPath)
@@ -183,9 +196,8 @@ func (ett *Entity) Decompress() *Entity {
 
 		if _, err := io.Copy(dst, funzip); err != nil {
 			PrintlnError(err)
-		} else {
-			PrintSpinner(fzip.Name)
 		}
+
 		if err := funzip.Close(); err != nil {
 			PrintlnError(err)
 		}
@@ -199,6 +211,8 @@ func (ett *Entity) Decompress() *Entity {
 }
 
 func (ett *Entity) DecompressAsync() *Entity {
+	ett.FileIndex = 0
+
 	fh, err := os.Open(ett.InputFullPath)
 	FatalError(err)
 
@@ -231,6 +245,7 @@ func (ett *Entity) DecompressAsync() *Entity {
 		}
 
 		wg.Add(1)
+		ett.FileIndex += 1
 
 		go func(dstPath string, fzip *zip.File, header zip.FileHeader) {
 			defer wg.Done()
@@ -241,9 +256,8 @@ func (ett *Entity) DecompressAsync() *Entity {
 
 			if _, err := io.Copy(dst, funzip); err != nil {
 				PrintlnError(err)
-			} else {
-				PrintSpinner(fzip.Name)
 			}
+
 			if err := funzip.Close(); err != nil {
 				PrintlnError(err)
 			}
@@ -253,6 +267,11 @@ func (ett *Entity) DecompressAsync() *Entity {
 			os.Chtimes(dstPath, header.FileInfo().ModTime(), header.FileInfo().ModTime())
 
 		}(dstPath, fzip, header)
+
+		if ett.FileIndex > 0 && ett.FileIndex%32 == 0 {
+			PrintSpinner(strconv.Itoa(ett.FileIndex))
+			wg.Wait()
+		}
 	}
 	wg.Wait()
 
