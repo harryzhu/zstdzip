@@ -55,8 +55,8 @@ func PrintlnDebug(s string) {
 func PrintSpinner(s string) {
 	if IsDebug {
 		s2 := string([]rune(s))
-		if len(s2) > 32 {
-			fmt.Printf("\r ... %s \r", s[0:31])
+		if len(s2) > 64 {
+			fmt.Printf("\r ... %s \r", s[0:63])
 		} else {
 			fmt.Printf("\r ... %s \r", s)
 		}
