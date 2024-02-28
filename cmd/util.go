@@ -54,7 +54,7 @@ func PrintlnDebug(s string) {
 
 func PrintSpinner(s string) {
 	if IsDebug {
-		fmt.Printf("... %-32s \r", s)
+		fmt.Printf("... %-32s \r", s[0:31])
 	}
 }
 
