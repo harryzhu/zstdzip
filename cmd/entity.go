@@ -116,7 +116,7 @@ func (ett *Entity) Compress() *Entity {
 	var header *zip.FileHeader
 	for abspath, zipname := range ett.ZipFileMap {
 
-		PrintlnDebug(zipname)
+		PrintSpinner(zipname)
 
 		finfo, err := os.Stat(abspath)
 		FatalError(err)
@@ -184,7 +184,7 @@ func (ett *Entity) Decompress() *Entity {
 		if _, err := io.Copy(dst, funzip); err != nil {
 			PrintlnError(err)
 		} else {
-			PrintlnDebug(fzip.Name)
+			PrintSpinner(fzip.Name)
 		}
 		if err := funzip.Close(); err != nil {
 			PrintlnError(err)

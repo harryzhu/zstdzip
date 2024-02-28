@@ -52,6 +52,12 @@ func PrintlnDebug(s string) {
 	}
 }
 
+func PrintSpinner(s string) {
+	if IsDebug {
+		fmt.Printf("... %-32s \r", s)
+	}
+}
+
 func AbsToSlash(s string) string {
 	s, err := filepath.Abs(s)
 	FatalError(err)
