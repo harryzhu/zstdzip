@@ -92,10 +92,10 @@ func SaveJson(p string, m map[string]string) {
 func HashFile(m string) string {
 	var hasher hash.Hash
 	switch m {
-	case "blake3":
-		hasher = blake3.New()
 	case "xxhash":
 		hasher = xxh3.New()
+	case "blake3":
+		hasher = blake3.New()
 	case "md5":
 		hasher = md5.New()
 	case "sha256":
@@ -103,7 +103,7 @@ func HashFile(m string) string {
 	case "sha1":
 		hasher = sha1.New()
 	default:
-		hasher = blake3.New()
+		hasher = xxh3.New()
 	}
 
 	fh, err := os.Open(Input)

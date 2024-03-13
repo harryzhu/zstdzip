@@ -30,6 +30,6 @@ func init() {
 	rootCmd.AddCommand(hashCmd)
 	rootCmd.MarkFlagRequired("input")
 
-	hashCmd.Flags().StringVar(&Sum, "sum", "blake3", "sum method: md5, sha1, sha256, blake3, xxhash")
+	hashCmd.Flags().StringVar(&Sum, "sum", "xxhash", "sum method: md5, sha1, sha256, blake3, xxhash")
 
 }
