@@ -49,6 +49,6 @@ or you can download https://github.com/mcmilk/7-Zip-zstd to unzip
 ./zstdzip hash --input=/User/harryzhu/test.zip  --sum=sha256
 `
 
-`--sum` : sum algorithm: md5, sha1, sha256, blake3, xxhash; default is `blake3`
+`--sum` : sum algorithm: md5, sha1, sha256, blake3, xxhash; default is `xxhash`
 
 ## Benchmark:
