@@ -1,5 +1,6 @@
-dist/*
+dist/
 .DS_Store
 [Dd]esktop.ini
 Thumbs.db
 *.exe
+*.zip
