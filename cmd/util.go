@@ -37,13 +37,21 @@ func PrintArgs() {
 	fmt.Println(" ")
 }
 
-func PrintSpeed(fsize float64, tsec float64) float64 {
+func DivideFloat64(a, b float64) float64 {
+	if b == 0.0 {
+		panic("a cannot be divided by ZERO")
+	}
+
+	return a / b
+}
+
+func PrintSpeed(fsize float64, tsec float64) {
 	MB := float64(1 << 20)
-	fspeed := fsize / tsec
-	fspeed_mb := fsize / MB / tsec
-	fmt.Printf("size: %.2f Bytes( %.2f MB ), seconds: %.7f\n", fsize, fsize/MB, tsec)
+	fspeed := DivideFloat64(fsize, tsec)
+	fspeed_mb := DivideFloat64(fspeed, MB)
+	fmt.Printf("size: %.2f Bytes( %.2f MB ), seconds: %.7f\n", fsize, DivideFloat64(fsize, MB), tsec)
 	fmt.Printf("Speed: %.2f MB/s\n", fspeed_mb)
-	return fspeed
+
 }
 
 func GetTimeNowUnix() int64 {

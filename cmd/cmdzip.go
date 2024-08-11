@@ -4,7 +4,9 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -34,7 +36,10 @@ var zipCmd = &cobra.Command{
 		entity := NewEntity(Input, Output).WithZipLevel(Speed).SetZipFileMap()
 		entity.OpenZipTempFile().Compress().CloseZipTempFile()
 
-		
+		if fh, err := os.Stat(Output); err == nil {
+			fmt.Printf("Compression Rate: %.4f \n",
+				DivideFloat64(float64(fh.Size()), float64(TotalSize)))
+		}
 	},
 }
 
