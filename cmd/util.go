@@ -33,7 +33,17 @@ func PrintArgs() {
 	fmt.Println("--async=", Async)
 	fmt.Println("--debug=", IsDebug)
 	fmt.Println("--sum=", Sum)
+	fmt.Println("YYYYMMDD:", YYYYMMDD)
 	fmt.Println(" ")
+}
+
+func PrintSpeed(fsize float64, tsec float64) float64 {
+	MB := float64(1 << 20)
+	fspeed := fsize / tsec
+	fspeed_mb := fsize / MB / tsec
+	fmt.Printf("size: %.2f Bytes( %.2f MB ), seconds: %.7f\n", fsize, fsize/MB, tsec)
+	fmt.Printf("Speed: %.2f MB/s\n", fspeed_mb)
+	return fspeed
 }
 
 func GetTimeNowUnix() int64 {

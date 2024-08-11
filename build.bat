@@ -20,5 +20,5 @@ go build -o dist/darwin_arm64/zstdzip -ldflags "-w -s" main.go
 
 7z.exe a dist/zstdzip_windows.zip dist/windows/zstdzip.exe
 7z.exe a dist/zstdzip_linux.zip dist/linux/zstdzip
-7z.exe a dist/zstdzip_mac.zip dist/darwin_arm64/zstdzip
-7z.exe a dist/zstdzip_mac_intel.zip dist/darwin_amd64/zstdzip
+7z.exe a dist/zstdzip_macos.zip dist/darwin_arm64/zstdzip
+7z.exe a dist/zstdzip_macos_intel.zip dist/darwin_amd64/zstdzip

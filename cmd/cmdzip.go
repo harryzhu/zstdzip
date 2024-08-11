@@ -33,6 +33,8 @@ var zipCmd = &cobra.Command{
 
 		entity := NewEntity(Input, Output).WithZipLevel(Speed).SetZipFileMap()
 		entity.OpenZipTempFile().Compress().CloseZipTempFile()
+
+		
 	},
 }
 

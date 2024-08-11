@@ -16,7 +16,9 @@ var (
 	timeBoot  time.Time
 	Input     string
 	Output    string
+	TotalSize int64
 	LogStatus string
+	YYYYMMDD  string
 	Threads   int
 	IsDebug   bool
 )
@@ -44,15 +46,26 @@ var rootCmd = &cobra.Command{
 
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		fmt.Println("\n *** elapse:", time.Since(timeBoot), "***")
+		timeDuration := time.Since(timeBoot)
+		fmt.Println("\n *** elapse:", timeDuration, "***")
+		if IsDebug {
+			timeSeconds := timeDuration.Seconds()
+			if timeSeconds <= 0 {
+				timeSeconds = 1
+			}
+			if TotalSize > 0 {
+				PrintSpeed(float64(TotalSize), float64(timeSeconds))
+			}
+		}
+
 		if LogStatus != "" {
 			fmt.Println(" *** global status:", GlobalStatus)
 			result := make(map[string]string, 4)
 			result["status"] = GlobalStatus
 			result["start"] = timeBoot.Format("15:04:05")
-			result["elapse"] = time.Since(timeBoot).String()
+			result["elapse"] = timeDuration.String()
 
-			SaveJson(LogStatus+".zstdzip.log", result)
+			SaveJson(LogStatus+".zstdzip-"+YYYYMMDD+".log", result)
 		}
 	},
 }
@@ -68,6 +81,7 @@ func Execute() {
 
 func init() {
 	timeBoot = GetTimeNow()
+	YYYYMMDD = timeBoot.Format("20060102")
 
 	rootCmd.PersistentFlags().StringVar(&Input, "input", "", "source file or folder")
 	rootCmd.PersistentFlags().StringVar(&Output, "output", "", "target file")

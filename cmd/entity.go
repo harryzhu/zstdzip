@@ -106,6 +106,7 @@ func (ett *Entity) SetZipFileMap() *Entity {
 			if nameInZip != "" && nameInZip != "." && nameInZip != ".." {
 				zfp[p] = nameInZip
 			}
+
 			return nil
 		}
 		err = filepath.Walk(ett.InputFullPath, walkFunc)
@@ -148,6 +149,11 @@ func (ett *Entity) Compress() *Entity {
 		if !finfo.IsDir() {
 			_, err = io.Copy(w, fp)
 			FatalError(err)
+
+			if IsDebug {
+				TotalSize += finfo.Size()
+			}
+
 		}
 
 	}
@@ -203,6 +209,10 @@ func (ett *Entity) Decompress() *Entity {
 		}
 		dst.Close()
 
+		if IsDebug {
+			TotalSize += header.FileInfo().Size()
+		}
+
 		os.Chmod(dstPath, header.FileInfo().Mode())
 		os.Chtimes(dstPath, header.FileInfo().ModTime(), header.FileInfo().ModTime())
 
@@ -242,6 +252,10 @@ func (ett *Entity) DecompressAsync() *Entity {
 		if header.FileInfo().IsDir() {
 			os.MkdirAll(dstPath, header.Mode())
 			continue
+		}
+
+		if IsDebug {
+			TotalSize += header.FileInfo().Size()
 		}
 
 		wg.Add(1)
