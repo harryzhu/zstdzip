@@ -37,8 +37,10 @@ var zipCmd = &cobra.Command{
 		entity.OpenZipTempFile().Compress().CloseZipTempFile()
 
 		if fh, err := os.Stat(Output); err == nil {
-			fmt.Printf("Compression Rate: %.4f \n",
-				DivideFloat64(float64(fh.Size()), float64(TotalSize)))
+			if TotalSize > 0 && fh.Size() > 0 {
+				fmt.Printf("Compression Rate: %.4f \n",
+					DivideFloat64(float64(fh.Size()), float64(TotalSize)))
+			}
 		}
 	},
 }
