@@ -122,6 +122,11 @@ func HashFile(m string) string {
 		FatalError(err)
 	}
 
+	if IsDebug {
+		fhinfo, _ := fh.Stat()
+		TotalSize += fhinfo.Size()
+	}
+
 	r := bufio.NewReader(fh)
 
 	var buf []byte = make([]byte, 8192)
