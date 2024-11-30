@@ -32,7 +32,6 @@ var rootCmd = &cobra.Command{
 	or you can use https://github.com/mcmilk/7-Zip-zstd to unzip`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		fmt.Println(" *** start:", timeBoot.Format("15:04:05"), "***")
-		numCPU = runtime.NumCPU()
 
 		if Threads > numCPU || Threads < 1 {
 			numCPU = runtime.NumCPU()
@@ -82,11 +81,12 @@ func Execute() {
 func init() {
 	timeBoot = GetTimeNow()
 	YYYYMMDD = timeBoot.Format("20060102")
+	numCPU = runtime.NumCPU()
 
 	rootCmd.PersistentFlags().StringVar(&Input, "input", "", "source file or folder")
 	rootCmd.PersistentFlags().StringVar(&Output, "output", "", "target file")
 	rootCmd.PersistentFlags().StringVar(&LogStatus, "log", "", "log Global Status into this file")
-	rootCmd.PersistentFlags().IntVar(&Threads, "threads", 8, "threads")
+	rootCmd.PersistentFlags().IntVar(&Threads, "threads", numCPU, "threads")
 	rootCmd.PersistentFlags().BoolVarP(&IsDebug, "debug", "", false, "print debug info")
 
 }

@@ -282,7 +282,7 @@ func (ett *Entity) DecompressAsync() *Entity {
 
 		}(dstPath, fzip, header)
 
-		if ett.FileIndex > 0 && ett.FileIndex%32 == 0 {
+		if ett.FileIndex > 0 && ett.FileIndex%numCPU == 0 {
 			PrintSpinner(strconv.Itoa(ett.FileIndex))
 			wg.Wait()
 		}
