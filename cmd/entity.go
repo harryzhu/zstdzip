@@ -96,6 +96,8 @@ func (ett *Entity) SetZipFileMap() *Entity {
 		zfp[ett.InputFullPath] = filepath.Base(ett.InputFullPath)
 	} else {
 		fpathSkip := filepath.ToSlash(filepath.Dir(ett.InputFullPath))
+		fpathSkip = strings.Replace(fpathSkip, ":.", ":", 1)
+		PrintlnDebug(fpathSkip)
 		nameInZip := ""
 		zfp = make(map[string]string, 8192)
 		var walkFunc = func(p string, info os.FileInfo, err error) error {
@@ -103,6 +105,10 @@ func (ett *Entity) SetZipFileMap() *Entity {
 
 			nameInZip = strings.Trim(strings.Replace(p, fpathSkip, "", 1), "/")
 			nameInZip = filepath.ToSlash(nameInZip)
+			PrintlnDebug(nameInZip)
+			if strings.Contains(nameInZip, ":") {
+				FatalError(`file path in zip should not contain colon(:), in Windows, drive letter should be upper case, C:\, D:\, E:\, NOT c:\, d:\, e:\`)
+			}
 			if nameInZip != "" && nameInZip != "." && nameInZip != ".." {
 				zfp[p] = nameInZip
 			}
@@ -124,7 +130,7 @@ func (ett *Entity) Compress() *Entity {
 	ettFileCount := strconv.Itoa(ett.FileCount)
 	ett.FileIndex = 0
 	for abspath, zipname := range ett.ZipFileMap {
-
+		PrintlnDebug(zipname)
 		finfo, err := os.Stat(abspath)
 		FatalError(err)
 
@@ -188,6 +194,7 @@ func (ett *Entity) Decompress() *Entity {
 		dstPath = filepath.Join(ett.OutputFullPath, fzip.Name)
 		dstPath = filepath.ToSlash(dstPath)
 		dstDir = filepath.Dir(dstPath)
+		PrintlnDebug(dstPath)
 		if _, err := os.Stat(dstDir); err != nil {
 			os.MkdirAll(dstDir, os.ModePerm)
 		}
