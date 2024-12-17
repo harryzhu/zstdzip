@@ -38,7 +38,7 @@ var zipCmd = &cobra.Command{
 
 		if fh, err := os.Stat(Output); err == nil {
 			if TotalSize > 0 && fh.Size() > 0 {
-				fmt.Printf("Compression Rate: %.4f \n",
+				fmt.Printf("*** Compression Rate: %.4f ***\n",
 					DivideFloat64(float64(fh.Size()), float64(TotalSize)))
 			}
 		}

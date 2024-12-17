@@ -33,7 +33,6 @@ func PrintArgs() {
 	fmt.Println("--async=", Async)
 	fmt.Println("--debug=", IsDebug)
 	fmt.Println("--sum=", Sum)
-	fmt.Println("YYYYMMDD:", YYYYMMDD)
 	fmt.Println(" ")
 }
 
@@ -62,14 +61,14 @@ func GetTimeNow() time.Time {
 	return time.Now()
 }
 
-func FatalError(err error) {
+func FatalError(err any) {
 	if err != nil {
 		GlobalStatus = "error"
 		log.Fatal(err)
 	}
 }
 
-func PrintlnError(err error) {
+func PrintlnError(err any) {
 	if err != nil {
 		GlobalStatus = "error"
 		log.Println(err)

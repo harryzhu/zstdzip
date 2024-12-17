@@ -16,6 +16,7 @@ var (
 	timeBoot  time.Time
 	Input     string
 	Output    string
+	Password  string
 	TotalSize int64
 	LogStatus string
 	YYYYMMDD  string

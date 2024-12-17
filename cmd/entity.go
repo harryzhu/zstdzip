@@ -132,6 +132,7 @@ func (ett *Entity) Compress() *Entity {
 		PrintSpinner(strconv.Itoa(ett.FileIndex) + " / " + ettFileCount)
 
 		fp, err := os.Open(abspath)
+
 		FatalError(err)
 
 		header, err = zip.FileInfoHeader(finfo)
@@ -147,6 +148,7 @@ func (ett *Entity) Compress() *Entity {
 		FatalError(err)
 
 		if !finfo.IsDir() {
+
 			_, err = io.Copy(w, fp)
 			FatalError(err)
 
@@ -155,7 +157,7 @@ func (ett *Entity) Compress() *Entity {
 			}
 
 		}
-
+		fp.Close()
 	}
 
 	return ett
