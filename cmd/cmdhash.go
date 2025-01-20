@@ -1,6 +1,5 @@
 /*
 Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -15,8 +14,8 @@ var Sum string
 
 // hashCmd represents the hash command
 var hashCmd = &cobra.Command{
-	Use:   "hash --sum=blake3 | xxhash | md5 | sha1 | sha256 --input=path/of/file.txt",
-	Short: "",
+	Use:   "hash",
+	Short: "hash --sum=blake3 | xxhash | md5 | sha1 | sha256 --input=path/of/file.txt",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		Sum = strings.ToLower(Sum)
