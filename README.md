@@ -1,5 +1,5 @@
 # zstdzip
-compress and decompress via ZSTD
+compress and decompress via ZSTD with zip format, can keep file's permission and last-modified timestamp.
 
 ## Performance:
 Faster than `7-Zip`
