@@ -4,9 +4,9 @@ compress and decompress via ZSTD
 ## Performance:
 Faster than `7-Zip`
 
-`zstdzip`: compress 563GB (246,516 mp4 files): `10 minutes 6 seconds`; `decompress`: `8 minutes 56 seconds`;
+`zstdzip`: compress 563GB (246,516 mp4 files): `10 minutes 6 seconds`; decompress: `8 minutes 56 seconds`;
 
-`7-zip`: compress same data above: `63 minutes 24 seconds`;
+`7-Zip`: compress same data above: `63 minutes 24 seconds`;
 
 
 
@@ -16,7 +16,7 @@ Faster than `7-Zip`
 ```Bash
 ./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip
 
-# default: compress paralell
+# default: 并行压缩，会自动生成 8 个压缩档
 ```
 
 or:
@@ -36,7 +36,7 @@ or:
 # 忽略空文件夹
 # 忽略隐藏文件（点 . 开头的文件名）
 # 保存为 /User/harryzhu/docs.zst.zip 
-# 采用并行压缩，会生成16个文件，每个文件都是完整的压缩文件，可以单独解压缩
+# 采用并行压缩，会生成8个文件，每个文件都是完整的压缩文件，可以单独解压缩
 ```
 
 or:
@@ -62,15 +62,20 @@ or:
 
 ```Bash
 ./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/t2
+
+# 默认并行解压缩，会自动解压同文件夹下的另外 7 个压缩档 test.zip.1, test.zip.2, test.zip.3 ... test.zip.7
 ```
 
 or:
 
 ```Bash
 ./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/test --serial
+
+# --serial : 一次只解压一个压缩档，如果不指定该参数，默认会同时解压缩8个压缩档，在SSD上面解压缩性能极速提升.
+# 但在机械硬盘上，应该显示指定`--serial`，io性能会更好。
 ```
 
-`--serial` : 一次只解压一个压缩档，如果不指定该参数，默认会同时解压缩8个压缩档，在SSD上面解压缩性能极速提升.在机械硬盘上，应该显示指定`--serial`，该参数主要针对机械硬盘优化。
+
 
 
 
@@ -78,6 +83,9 @@ or:
 
 ```Bash
 ./zstdzip hash --source=/User/harryzhu/test.zip  --sum=sha256
+
+# 显示文件的哈希：
+# 使用 --sum= 指定哈希算法，支持 md5, sha1, sha256, blake3, xxhash
 ```
 
 `--sum` : sum algorithm: md5, sha1, sha256, blake3, xxhash; default is `xxhash`
