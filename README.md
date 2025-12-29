@@ -26,6 +26,11 @@ or:
 
 # --password=1234： 文件使用指定密码加密
 # 对应的，解压（unzip）时，也需要提供该密码才能解压成功
+# --level=0 ｜ 1 ｜ 2 ｜ 3` : 
+#   0: fastest without compression, 
+#   1: default compression,
+#   2: better compression,
+#   3: best compression but slowest speed. 
 
 ```
 
@@ -51,15 +56,6 @@ or:
 # --serial: 传统压缩模式, 一个一个压缩，最后保存在一个单一的压缩包内.
 ```
 
-`--level=0 ｜ 1 ｜ 2 ｜ 3` : 
-
-        0: fastest without compression, 
-
-        1: default compression,
-
-        2: better compression,
-        
-        3: best compression but slowest speed. 
 
 
 ### decompress:
