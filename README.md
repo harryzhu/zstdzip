@@ -2,11 +2,11 @@
 compress and decompress via ZSTD
 
 ## Performance:
-Faster than `7-Zip`.
+Faster than `7-Zip`
 
-`zstdzip`: `compress` 563GB (246,516 mp4 files): 10 minutes 6 seconds; `decompress`: 8 minutes 56 seconds;
+`zstdzip`: compress 563GB (246,516 mp4 files): `10 minutes 6 seconds`; `decompress`: `8 minutes 56 seconds`;
 
-`7-zip`: `compress` same data above: 63 minutes 24 seconds;
+`7-zip`: compress same data above: `63 minutes 24 seconds`;
 
 
 
