@@ -23,6 +23,10 @@ or:
 
 ```Bash
 ./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --level=1  --threads=16 --password=1234
+
+# --password=1234： 文件使用指定密码加密
+# 对应的，解压（unzip）时，也需要提供该密码才能解压成功
+
 ```
 
 or:
@@ -47,7 +51,7 @@ or:
 # --serial: 传统压缩模式, 一个一个压缩，最后保存在一个单一的压缩包内.
 ```
 
-`--speed=0/1/2/3` : 
+`--level=0 ｜ 1 ｜ 2 ｜ 3` : 
 
         0: fastest without compression, 
 
