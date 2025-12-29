@@ -7,11 +7,20 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"io"
-	"strings"
 
 	"encoding/hex"
 
 	"os"
+)
+
+const AESCHUNKSIZE int64 = 16 << 20
+const AESBLOCKSIZE int = 16
+
+// PwdKey length can be 16
+
+var (
+	pwdKey []byte
+	ivKey  []byte
 )
 
 type CryptFile struct {
@@ -22,7 +31,7 @@ type CryptFile struct {
 
 func NewCryptFile(srcpath string, dstpath string, pswd string) *CryptFile {
 	if pswd == "" {
-		FatalError("password cannot be empty")
+		FatalError("NewCryptFile", NewError("password cannot be empty"))
 	}
 
 	cf := &CryptFile{
@@ -44,23 +53,13 @@ func (cf *CryptFile) AESDecode() {
 	aesDecodeFile(cf.SrcPath, cf.DstPath)
 }
 
-const AESCHUNKSIZE int64 = 16 << 20
-const AESBLOCKSIZE int = 16
-
-// PwdKey length can be 16
-
-var (
-	pwdKey []byte
-	ivKey  []byte
-)
-
 // ------------
 
 func (cf *CryptFile) setKeyPasswordIV() *CryptFile {
 	var salt string = SHA256("Cu5t0m-s@lt")
 
 	if cf.Password == "" {
-		FatalError("you did not set any password")
+		FatalError("setKeyPasswordIV", NewError("you did not set any password"))
 	}
 
 	pk := SHA256(MD5(cf.Password) + ":" + salt)
@@ -70,7 +69,7 @@ func (cf *CryptFile) setKeyPasswordIV() *CryptFile {
 	ivKey = []byte(ivk)[:AESBLOCKSIZE]
 
 	if pwdKey == nil || ivKey == nil {
-		FatalError("password and iv key cannot be empty")
+		FatalError("setKeyPasswordIV", NewError("password and iv key cannot be empty"))
 	}
 
 	return cf
@@ -78,7 +77,7 @@ func (cf *CryptFile) setKeyPasswordIV() *CryptFile {
 
 func aesEncodeFile(src string, dst string) {
 	fsrc, err := os.Open(src)
-	FatalError(err)
+	FatalError("aesEncodeFile", err)
 
 	defer fsrc.Close()
 	dst_temp := dst + ".temp"
@@ -87,7 +86,7 @@ func aesEncodeFile(src string, dst string) {
 	iv := []byte(ivKey)
 
 	block, err := aes.NewCipher(pwdKey)
-	FatalError(err)
+	FatalError("aesEncodeFile", err)
 
 	stream := cipher.NewCTR(block, iv)
 
@@ -102,7 +101,7 @@ func aesEncodeFile(src string, dst string) {
 			}
 
 			if err != nil {
-				PrintlnError(err)
+				PrintError("aesEncodeFile", err)
 				break
 			}
 		}
@@ -110,7 +109,7 @@ func aesEncodeFile(src string, dst string) {
 		stream.XORKeyStream(encByte, buf[:n])
 
 		_, err = fdst.Write(encByte)
-		FatalError(err)
+		FatalError("aesEncodeFile", err)
 	}
 	fdst.Flush()
 	fhdst.Close()
@@ -120,7 +119,7 @@ func aesEncodeFile(src string, dst string) {
 
 func aesDecodeFile(src string, dst string) {
 	fsrc, err := os.Open(src)
-	FatalError(err)
+	FatalError("aesDecodeFile", err)
 	defer fsrc.Close()
 
 	dst_temp := dst + ".temp"
@@ -129,7 +128,7 @@ func aesDecodeFile(src string, dst string) {
 	iv := []byte(ivKey)
 
 	block, err := aes.NewCipher(pwdKey)
-	FatalError(err)
+	FatalError("aesDecodeFile", err)
 
 	stream := cipher.NewCTR(block, iv)
 
@@ -145,7 +144,7 @@ func aesDecodeFile(src string, dst string) {
 			}
 
 			if err != nil {
-				PrintlnError(err)
+				PrintError("aesDecodeFile", err)
 				break
 			}
 		}
@@ -153,20 +152,12 @@ func aesDecodeFile(src string, dst string) {
 		stream.XORKeyStream(decByte, buf[:n])
 
 		_, err = fdst.Write(decByte)
-		FatalError(err)
+		FatalError("aesDecodeFile", err)
 	}
 	fdst.Flush()
 	fhdst.Close()
 
 	os.Rename(dst_temp, dst)
-}
-
-func GetEnv(s string, vDefault string) string {
-	v := os.Getenv(s)
-	if v == "" {
-		return vDefault
-	}
-	return strings.Trim(v, " ")
 }
 
 func MD5(s string) string {
@@ -185,7 +176,7 @@ func NewBufWriter(f string) (*bufio.Writer, *os.File) {
 	fh, err := os.Create(f)
 	if err != nil {
 		fh.Close()
-		FatalError(err)
+		FatalError("NewBufWriter", err)
 	}
 
 	return bufio.NewWriter(fh), fh

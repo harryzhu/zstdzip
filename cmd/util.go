@@ -1,109 +1,664 @@
 package cmd
 
 import (
+	"archive/zip"
 	"bufio"
-	"crypto/sha1"
-	"hash"
-
 	"crypto/md5"
+	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
+	"hash"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/cespare/xxhash/v2"
+	"github.com/klauspost/compress/zstd"
 	"github.com/zeebo/blake3"
 	"github.com/zeebo/xxh3"
 )
 
-var (
-	GlobalStatus string = "ok"
-)
-
-func PrintArgs() {
-	fmt.Println("--input=", Input)
-	fmt.Println("--output=", Output)
-	fmt.Println("--speed=", Speed)
-	fmt.Println("--threads=", numCPU)
-	fmt.Println("--async=", Async)
-	fmt.Println("--debug=", IsDebug)
-	fmt.Println("--sum=", Sum)
-	fmt.Println(" ")
-}
-
-func DivideFloat64(a, b float64) float64 {
-	if b == 0.0 {
-		panic("a cannot be divided by ZERO")
+func PrintArgs(args ...string) error {
+	if IsDebug == false {
+		return nil
+	}
+	if Contains(args, "source") {
+		fmt.Println("--source=", Source)
 	}
 
-	return a / b
-}
-
-func PrintSpeed(fsize float64, tsec float64) {
-	MB := float64(1 << 20)
-	fspeed := DivideFloat64(fsize, tsec)
-	fspeed_mb := DivideFloat64(fspeed, MB)
-	fmt.Printf("size: %.2f Bytes( %.2f MB ), seconds: %.7f\n", fsize, DivideFloat64(fsize, MB), tsec)
-	fmt.Printf("Speed: %.2f MB/s\n", fspeed_mb)
-
-}
-
-func GetTimeNowUnix() int64 {
-	return time.Now().Unix()
-}
-
-func GetTimeNow() time.Time {
-	return time.Now()
-}
-
-func FatalError(err any) {
-	if err != nil {
-		GlobalStatus = "error"
-		log.Fatal(err)
+	if Contains(args, "target") {
+		fmt.Println("--target=", Target)
 	}
-}
 
-func PrintlnError(err any) {
-	if err != nil {
-		GlobalStatus = "error"
-		log.Println(err)
+	if Contains(args, "serial") {
+		fmt.Println("--serial=", IsSerial)
 	}
-}
 
-func PrintlnDebug(s string) {
+	if Contains(args, "sum") {
+		fmt.Println("--sum=", Sum)
+	}
+
+	if Contains(args, "threads") {
+		fmt.Println("--threads=", Threads)
+	}
+
+	if Contains(args, "level") {
+		fmt.Println("--level=", Level)
+	}
+
 	if IsDebug {
-		fmt.Println(s)
+		fmt.Println("--debug=", IsDebug)
 	}
+
+	fmt.Println("")
+
+	return nil
 }
 
-func PrintSpinner(s string) {
+func GetNowUnix() int64 {
+	return time.Now().UTC().Unix()
+}
+
+func ToUnixSlash(s string) string {
+	// for windows
+	return strings.ReplaceAll(s, "\\", "/")
+}
+
+func GetXxhashString(b []byte) string {
+	return strconv.FormatUint(xxhash.Sum64(b), 10)
+	//return strconv.FormatUint(xxh3.Hash(b), 10)
+}
+
+func GetMD5String(b []byte) string {
+	hasher := md5.New()
+	hasher.Write(b)
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func Int2Str(n int) string {
+	return strconv.Itoa(n)
+}
+
+func Contains(arr []string, target string) bool {
+	for _, val := range arr {
+		if val == target {
+			return true
+		}
+	}
+	return false
+}
+
+func GetCompressLevel(n int) zstd.EncoderLevel {
+	cLevel := zstd.SpeedDefault
+	switch n {
+	case 0:
+		cLevel = zstd.SpeedFastest
+	case 1:
+		cLevel = zstd.SpeedDefault
+	case 2:
+		cLevel = zstd.SpeedBetterCompression
+	case 3:
+		cLevel = zstd.SpeedBestCompression
+	default:
+		cLevel = zstd.SpeedDefault
+	}
+
+	return cLevel
+}
+
+func OpenZipTempFile(zipTempFile string) (zipTempFileHandler *os.File, zipTempWriter *zip.Writer) {
+	compr := zstd.ZipCompressor(
+		zstd.WithWindowSize(1<<20),
+		zstd.WithEncoderConcurrency(Threads),
+		zstd.WithEncoderLevel(GetCompressLevel(Level)),
+		zstd.WithEncoderCRC(false))
+
+	var err error
+	zipTempFileHandler, err = os.Create(zipTempFile)
+	if err != nil {
+		zipTempFileHandler.Close()
+		FatalError("OpenZipTempFile", err)
+	}
+
+	zipTempWriter = zip.NewWriter(zipTempFileHandler)
+	zipTempWriter.RegisterCompressor(zstd.ZipMethodWinZip, compr)
+	return zipTempFileHandler, zipTempWriter
+}
+
+func CloseZipTempFile(zipTempFile string, zipTempFileHandler *os.File, zipTempWriter *zip.Writer) {
+	zipTempWriter.Close()
+	zipTempFileHandler.Close()
+
+	if Password != "" {
+		NewCryptFile(zipTempFile, zipTempFile+".encrypted", Password).AESEncode()
+		os.Rename(zipTempFile+".encrypted", zipTempFile)
+	}
+
+	TargetFile := strings.Replace(zipTempFile, ".ing", "", 1)
+	err := os.Rename(zipTempFile, TargetFile)
+	FatalError("OpenZipTempFile", err)
+}
+
+func CopyFile(src, dst string) error {
+	src = ToUnixSlash(src)
+	dst = ToUnixSlash(dst)
+	srcFileHandler, err := os.Open(src)
+	if err != nil {
+		PrintError("CopyFile: os.Open", err)
+		return err
+	}
+	defer srcFileHandler.Close()
+
+	dstTemp := dst + ".ing"
+
+	MakeDirs(filepath.Dir(dstTemp))
+
+	dstFileHandler, err := os.Create(dstTemp)
+	if err != nil {
+		PrintError("CopyFile: os.Create", err)
+		return err
+	}
+	defer dstFileHandler.Close()
+
+	srcReader := bufio.NewReader(srcFileHandler)
+	dstWriter := bufio.NewWriter(dstFileHandler)
+	_, err = io.Copy(dstWriter, srcReader)
+	if err != nil {
+		PrintError("CopyFile: io.Copy", err)
+		return err
+	}
+
+	dstWriter.Flush()
+
+	finfo, err := srcFileHandler.Stat()
+	PrintError("CopyFile", err)
+
+	err = os.Chtimes(dstTemp, finfo.ModTime(), finfo.ModTime())
+	PrintError("CopyFile: os.Chtimes", err)
+
+	srcFileHandler.Close()
+	dstFileHandler.Close()
+
+	err = os.Rename(dstTemp, dst)
+	PrintError("CopyFile: os.Rename", err)
+
+	err = os.Chmod(dst, finfo.Mode())
+	PrintError("CopyFile: os.Chmod", err)
+
+	return nil
+}
+
+func MakeDirs(dpath string) error {
+	dpath = ToUnixSlash(dpath)
+	_, err := os.Stat(dpath)
+	if err != nil {
+		DebugInfo("MakeDirs", dpath)
+		err = os.MkdirAll(dpath, os.ModePerm)
+		PrintError("MakeDirs:MkdirAll", err)
+		return err
+	}
+	return nil
+}
+
+func SendFileToChanFile(srcPath string, dstPath string) (ele map[string]string, err error) {
+	srcPath = ToUnixSlash(srcPath)
+	dstPath = ToUnixSlash(dstPath)
+
+	ele = make(map[string]string)
+
+	ele["srcPath"] = srcPath
+	ele["dstPath"] = dstPath
+
+	return ele, nil
+}
+
+func GetChanFileToDisk(chanFileNum chan map[string]string, tw *zip.Writer) error {
+	for {
+		cf := <-chanFileNum
+		if val, ok := cf["_COPYSTATUS"]; ok {
+			DebugInfo("_COPYSTATUS:", val)
+			break
+		}
+
+		if srcPath, ok := cf["srcPath"]; ok {
+			dstPath := cf["dstPath"]
+			if IsDebug {
+				fmt.Printf("%s <== %s\n", dstPath, srcPath)
+			}
+
+			finfo, err := os.Stat(srcPath)
+			if err != nil {
+				PrintError("os.Stat:"+srcPath, err)
+				return err
+			}
+
+			header, err := zip.FileInfoHeader(finfo)
+			if err != nil {
+				PrintError("zip.FileInfoHeader:"+srcPath, err)
+				return err
+			} else {
+				header.Name = dstPath
+			}
+
+			header.Method = zstd.ZipMethodWinZip
+
+			w, err := tw.CreateHeader(header)
+			if err != nil {
+				PrintError("tw.CreateHeader:"+srcPath, err)
+				return err
+			}
+
+			if !finfo.IsDir() {
+				fp, err := os.Open(srcPath)
+				defer fp.Close()
+
+				if err != nil {
+					PrintError("os.Open:"+srcPath, err)
+					return err
+				}
+				_, err = io.Copy(w, fp)
+
+				if err != nil {
+					PrintError("io.Copy:"+srcPath, err)
+					return err
+				}
+				fp.Close()
+			}
+
+		}
+
+	}
+
+	return nil
+}
+
+func CompressDir() error {
+	var qcap int = 10
+	var chanFile chan map[string]string = make(chan map[string]string, qcap)
+	var chanFile1 chan map[string]string = make(chan map[string]string, qcap)
+	var chanFile2 chan map[string]string = make(chan map[string]string, qcap)
+	var chanFile3 chan map[string]string = make(chan map[string]string, qcap)
+	var chanFile4 chan map[string]string = make(chan map[string]string, qcap)
+	var chanFile5 chan map[string]string = make(chan map[string]string, qcap)
+	var chanFile6 chan map[string]string = make(chan map[string]string, qcap)
+	var chanFile7 chan map[string]string = make(chan map[string]string, qcap)
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(3)
+
+	go func() error {
+		defer wg.Done()
+
+		t0 := Target + ".ing"
+		t0FileHandler, t0Writer := OpenZipTempFile(t0)
+
+		GetChanFileToDisk(chanFile, t0Writer)
+
+		CloseZipTempFile(t0, t0FileHandler, t0Writer)
+
+		return nil
+	}()
+
+	go func() error {
+		defer wg.Done()
+
+		if !IsSerial {
+			wgCompress := sync.WaitGroup{}
+			var t1, t2, t3, t4, t5, t6, t7 string
+			var t1FileHandler, t2FileHandler, t3FileHandler, t4FileHandler, t5FileHandler, t6FileHandler, t7FileHandler *os.File
+			var t1Writer, t2Writer, t3Writer, t4Writer, t5Writer, t6Writer, t7Writer *zip.Writer
+
+			t1 = Target + ".1.ing"
+			t1FileHandler, t1Writer = OpenZipTempFile(t1)
+
+			t2 = Target + ".2.ing"
+			t2FileHandler, t2Writer = OpenZipTempFile(t2)
+
+			t3 = Target + ".3.ing"
+			t3FileHandler, t3Writer = OpenZipTempFile(t3)
+
+			t4 = Target + ".4.ing"
+			t4FileHandler, t4Writer = OpenZipTempFile(t4)
+
+			t5 = Target + ".5.ing"
+			t5FileHandler, t5Writer = OpenZipTempFile(t5)
+
+			t6 = Target + ".6.ing"
+			t6FileHandler, t6Writer = OpenZipTempFile(t6)
+
+			t7 = Target + ".7.ing"
+			t7FileHandler, t7Writer = OpenZipTempFile(t7)
+
+			wgCompress.Add(7)
+			go func() {
+				defer wgCompress.Done()
+				GetChanFileToDisk(chanFile1, t1Writer)
+			}()
+			go func() {
+				defer wgCompress.Done()
+				GetChanFileToDisk(chanFile2, t2Writer)
+			}()
+			go func() {
+				defer wgCompress.Done()
+				GetChanFileToDisk(chanFile3, t3Writer)
+			}()
+			go func() {
+				defer wgCompress.Done()
+				GetChanFileToDisk(chanFile4, t4Writer)
+			}()
+			go func() {
+				defer wgCompress.Done()
+				GetChanFileToDisk(chanFile5, t5Writer)
+			}()
+			go func() {
+				defer wgCompress.Done()
+				GetChanFileToDisk(chanFile6, t6Writer)
+			}()
+			go func() {
+				defer wgCompress.Done()
+				GetChanFileToDisk(chanFile7, t7Writer)
+			}()
+
+			wgCompress.Wait()
+
+			CloseZipTempFile(t1, t1FileHandler, t1Writer)
+			CloseZipTempFile(t2, t2FileHandler, t2Writer)
+			CloseZipTempFile(t3, t3FileHandler, t3Writer)
+			CloseZipTempFile(t4, t4FileHandler, t4Writer)
+			CloseZipTempFile(t5, t5FileHandler, t5Writer)
+			CloseZipTempFile(t6, t6FileHandler, t6Writer)
+			CloseZipTempFile(t7, t7FileHandler, t7Writer)
+		}
+		return nil
+	}()
+
+	go func() error {
+		defer wg.Done()
+
+		var nameInZip string
+
+		regExt := regexp.MustCompile("(?i)" + RegExt)
+
+		num := 0
+		filepath.Walk(Source, func(fpath string, info os.FileInfo, err error) error {
+			if err != nil {
+				PrintError("CompressFiles: walk", err)
+				return err
+			}
+
+			if IsIgnoreEmptyDir {
+				if info.IsDir() {
+					return nil
+				}
+			}
+
+			if IsIgnoreDotFile {
+				if strings.HasPrefix(filepath.Base(fpath), ".") {
+					return nil
+				}
+			}
+
+			if RegExt != "" {
+				if regExt.MatchString(filepath.Ext(fpath)) == false {
+					return nil
+				}
+			}
+
+			if MaxSizeMB != -1 && (info.Size() > (MaxSizeMB << 20)) {
+				return nil
+			}
+
+			if MinSizeMB != -1 && (info.Size() < (MinSizeMB << 20)) {
+				return nil
+			}
+
+			if MinAge != "" {
+				if info.ModTime().Unix() < TimeStr2Unix(MinAge) {
+					return nil
+				}
+			}
+
+			if MaxAge != "" {
+				if info.ModTime().Unix() > TimeStr2Unix(MaxAge) {
+					return nil
+				}
+			}
+
+			fpath = ToUnixSlash(fpath)
+			nameInZip = strings.Trim(fpath[len(Source):], "/")
+
+			if nameInZip == "" || nameInZip == "." || nameInZip == ".." {
+				return nil
+			}
+
+			ele, err := SendFileToChanFile(fpath, nameInZip)
+			if err != nil {
+				return err
+			}
+
+			if !IsSerial {
+				twhash := strings.ToLower(GetMD5String([]byte(fpath)))
+				switch twhash[0:1] {
+				case "0":
+					chanFile <- ele
+				case "1":
+					chanFile <- ele
+				case "2":
+					chanFile1 <- ele
+				case "3":
+					chanFile1 <- ele
+				case "4":
+					chanFile2 <- ele
+				case "5":
+					chanFile2 <- ele
+				case "6":
+					chanFile3 <- ele
+				case "7":
+					chanFile3 <- ele
+				case "8":
+					chanFile4 <- ele
+				case "9":
+					chanFile4 <- ele
+				case "a":
+					chanFile5 <- ele
+				case "b":
+					chanFile5 <- ele
+				case "c":
+					chanFile6 <- ele
+				case "d":
+					chanFile6 <- ele
+				case "e":
+					chanFile7 <- ele
+				case "f":
+					chanFile7 <- ele
+				default:
+					chanFile <- ele
+					DebugInfo(nameInZip, " ==== ", twhash)
+				}
+			} else {
+				chanFile <- ele
+			}
+
+			num++
+			if !IsDebug {
+				if num < 100 || num%10 == 0 {
+					PrintSpinner(Int2Str(num))
+				}
+			}
+
+			return nil
+		})
+
+		PrintSpinner(Int2Str(num))
+		atomic.StoreInt32(&DeComTotalNum, int32(num))
+
+		copyDone := make(map[string]string)
+		copyDone["_COPYSTATUS"] = "DONE"
+		chanFile <- copyDone
+		chanFile1 <- copyDone
+		chanFile2 <- copyDone
+		chanFile3 <- copyDone
+		chanFile4 <- copyDone
+		chanFile5 <- copyDone
+		chanFile6 <- copyDone
+		chanFile7 <- copyDone
+		return nil
+	}()
+
+	wg.Wait()
+
+	return nil
+}
+
+func CompressFile(finfo os.FileInfo) error {
+	header, err := zip.FileInfoHeader(finfo)
+	if err != nil {
+		FatalError(Source, err)
+		return err
+	}
+	fpath := ToUnixSlash(Source)
+	nameInPath := filepath.Base(fpath)
+
+	header.Name = nameInPath
+
+	header.Method = zstd.ZipMethodWinZip
+
+	t0 := Target + ".ing"
+	t0FileHandler, t0Writer := OpenZipTempFile(t0)
+
+	fp, err := os.Open(Source)
+	if err != nil {
+		FatalError(Source, err)
+		return err
+	}
+
+	w, err := t0Writer.CreateHeader(header)
+	if err != nil {
+		FatalError(Source, err)
+		return err
+	}
+
+	if !finfo.IsDir() {
+		_, err = io.Copy(w, fp)
+		if err != nil {
+			PrintError(Source, err)
+			return err
+		}
+
+	}
+
+	fp.Close()
+
+	CloseZipTempFile(t0, t0FileHandler, t0Writer)
+
+	return nil
+}
+
+func DecompressFile(fpath string) error {
+	var fh *os.File
+	var err error
+
+	if Password != "" {
+		NewCryptFile(fpath, fpath+".decrypted", Password).AESDecode()
+		fh, err = os.Open(fpath + ".decrypted")
+	} else {
+		fh, err = os.Open(fpath)
+	}
+
+	FatalError("DecompressFile", err)
+
+	finfo, _ := fh.Stat()
+
+	unzipReader, err := zip.NewReader(fh, finfo.Size())
+	FatalError("DecompressFile", err)
+
+	decomp := zstd.ZipDecompressor(
+		zstd.WithDecoderConcurrency(Threads),
+	)
+
+	unzipReader.RegisterDecompressor(zstd.ZipMethodWinZip, decomp)
+
+	var dstPath, dstDir string
+
+	num := 0
+	regExt := regexp.MustCompile("(?i)" + RegExt)
+	for _, fzip := range unzipReader.File {
+		atomic.AddInt32(&DeComTotalNum, 1)
+
+		num++
+		if !IsDebug {
+			if num < 100 || num%10 == 0 {
+				PrintSpinner(Int2Str(int(atomic.LoadInt32(&DeComTotalNum))))
+			}
+		}
+
+		dstPath = filepath.Join(Target, fzip.Name)
+		dstPath = filepath.ToSlash(dstPath)
+		dstDir = filepath.Dir(dstPath)
+
+		if IsDebug {
+			fmt.Printf("%s ==> %s\n", fzip.Name, dstPath)
+		}
+
+		if _, err := os.Stat(dstDir); err != nil {
+			MakeDirs(dstDir)
+		}
+
+		header := fzip.FileHeader
+		if header.FileInfo().IsDir() {
+			DebugInfo("DecompressFile", header.Name)
+			MakeDirs(dstPath)
+			os.Chtimes(dstPath, header.FileInfo().ModTime(), header.FileInfo().ModTime())
+			os.Chmod(dstPath, header.Mode())
+			continue
+		}
+
+		if RegExt != "" {
+			if regExt.MatchString(filepath.Ext(dstPath)) == false {
+				continue
+			}
+		}
+
+		dst, _ := os.Create(dstPath)
+		funzip, err := fzip.Open()
+		PrintError("DecompressFile", err)
+
+		if _, err := io.Copy(dst, funzip); err != nil {
+			PrintError("DecompressFile", err)
+		}
+
+		if err := funzip.Close(); err != nil {
+			PrintError("DecompressFile", err)
+		}
+		dst.Close()
+
+		os.Chtimes(dstPath, header.FileInfo().ModTime(), header.FileInfo().ModTime())
+		os.Chmod(dstPath, header.FileInfo().Mode())
+	}
+
 	if IsDebug {
-		fmt.Printf("... %5.30s\r", s)
+		PrintSpinner(Int2Str(num))
 	}
-}
 
-func AbsToSlash(s string) string {
-	s, err := filepath.Abs(s)
-	FatalError(err)
-	return strings.TrimRight(filepath.ToSlash(s), "/")
-}
+	fh.Close()
 
-func SaveJson(p string, m map[string]string) {
-	fp, err := os.Create(p)
-	FatalError(err)
+	if Password != "" {
+		_, err = os.Stat(fpath + ".decrypted")
+		if err == nil {
+			os.Remove(fpath + ".decrypted")
+		}
+		PrintError("DecompressFile", err)
+	}
 
-	j, err := json.Marshal(m)
-	FatalError(err)
-
-	_, err = fp.Write(j)
-	defer fp.Close()
-
-	FatalError(err)
+	return nil
 }
 
 func HashFile(m string) string {
@@ -123,15 +678,10 @@ func HashFile(m string) string {
 		hasher = xxh3.New()
 	}
 
-	fh, err := os.Open(Input)
+	fh, err := os.Open(Source)
 	if err != nil {
 		fh.Close()
-		FatalError(err)
-	}
-
-	if IsDebug {
-		fhinfo, _ := fh.Stat()
-		TotalSize += fhinfo.Size()
+		FatalError("HashFile", err)
 	}
 
 	r := bufio.NewReader(fh)
@@ -143,11 +693,26 @@ func HashFile(m string) string {
 			if err == io.EOF {
 				break
 			}
-			FatalError(err)
+			FatalError("HashFile", err)
 		}
 		hasher.Write(buf[:n])
 	}
 
 	fh.Close()
 	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func TimeStr2Unix(s string) int64 {
+	layout := "20060102150405"
+	var parsedTime time.Time
+	var err error
+
+	parsedTime, err = time.ParseInLocation(layout, s, time.Local)
+
+	if err != nil {
+		PrintError("TimeStr2Unix", err)
+		os.Exit(0)
+	}
+
+	return parsedTime.Unix()
 }

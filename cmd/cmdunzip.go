@@ -1,55 +1,73 @@
 /*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
+Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 */
 package cmd
 
 import (
 	"fmt"
-	"log"
-	"path/filepath"
-	"strings"
+	"os"
+	"sync"
+	"sync/atomic"
 
 	"github.com/spf13/cobra"
 )
 
-var(
-	Async bool
+var (
+	DeComTotalNum int32
 )
 
 // unzipCmd represents the unzip command
 var unzipCmd = &cobra.Command{
 	Use:   "unzip",
-	Short: "unzip --input=/path/of/file.zip --output=/path/of/extract/folder",
-	Long:  `or you can use https://github.com/mcmilk/7-Zip-zstd to unzip`,
-	PreRun: func(cmd *cobra.Command, args []string) {
-		if Input == "" {
-			log.Fatal("--input= cannot be empty")
-		} else {
-			Input = AbsToSlash(Input)
+	Short: "--source=/path/to/file.zstd.zip --target=/path/to/extract-dir ",
+	Long: `optional args:
+	--password= : use this password for decryption;
+	--serial : decompress files one-by-one`,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		PrintArgs("source", "target", "threads", "serial")
+		if Source == Target || Source == "" || Target == "" {
+			FatalError("unzip", NewError("invalid --source= or --target="))
 		}
-		if Output == "" {
-			Output = "./" + strings.Replace(filepath.Base(Input), filepath.Ext(Input), "", 1)
-			fmt.Println("you can use --output= to specify the extract folder, default is current folder")
-		}
-		Output = AbsToSlash(Output)
+		fmt.Println(" *** start:", timeBoot.Format("15:04:05"), "***")
 
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		PrintArgs()
 
-		entity := NewEntity(Input, Output)
-		if Async == true{
-			entity.DecompressAsync()
-		}else{
-			entity.Decompress()
+		var decomFile string
+		wg := sync.WaitGroup{}
+		for idx := range 8 {
+			if idx == 0 {
+				decomFile = Source
+			} else {
+				decomFile = Source + "." + Int2Str(idx)
+			}
+
+			_, err := os.Stat(decomFile)
+
+			if err != nil {
+				continue
+			}
+			DebugInfo("unzip", decomFile)
+			wg.Add(1)
+			go func(decomFile string) {
+				defer wg.Done()
+
+				DecompressFile(decomFile)
+			}(decomFile)
+
+			if IsSerial {
+				wg.Wait()
+			}
 		}
-		
+		wg.Wait()
+
+		PrintSpinner(Int2Str(int(atomic.LoadInt32(&DeComTotalNum))))
 
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(unzipCmd)
-	unzipCmd.Flags().BoolVarP(&Async, "async", "",false, "unzip files in async mode")
+	unzipCmd.Flags().StringVar(&RegExt, "regext", "", "regex pattern of file extension(Case Insensitive). i.e.: .(mp4|txt|png)")
 
 }
