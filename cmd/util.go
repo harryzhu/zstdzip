@@ -606,7 +606,9 @@ func decompressFile(fpath string) error {
 		dstDir = filepath.Dir(dstPath)
 
 		if finfo.IsDir() {
+			DeComLock.Lock()
 			DeComDirInfoList = append(DeComDirInfoList, fzip)
+			DeComLock.Unlock()
 			continue
 		}
 

@@ -1,6 +1,3 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -16,6 +13,7 @@ import (
 var (
 	DeComTotalNum    int32
 	DeComDirInfoList []*zip.File
+	DeComLock        sync.Mutex
 )
 
 // unzipCmd represents the unzip command
