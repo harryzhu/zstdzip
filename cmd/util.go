@@ -176,55 +176,6 @@ func CloseZipTempFile(zipTempFile string, zipTempFileHandler *os.File, zipTempWr
 	FatalError("OpenZipTempFile", err)
 }
 
-func CopyFile(src, dst string) error {
-	src = ToUnixSlash(src)
-	dst = ToUnixSlash(dst)
-	srcFileHandler, err := os.Open(src)
-	if err != nil {
-		PrintError("CopyFile: os.Open", err)
-		return err
-	}
-	defer srcFileHandler.Close()
-
-	dstTemp := dst + ".ing"
-
-	MakeDirs(filepath.Dir(dstTemp))
-
-	dstFileHandler, err := os.Create(dstTemp)
-	if err != nil {
-		PrintError("CopyFile: os.Create", err)
-		return err
-	}
-	defer dstFileHandler.Close()
-
-	srcReader := bufio.NewReader(srcFileHandler)
-	dstWriter := bufio.NewWriter(dstFileHandler)
-	_, err = io.Copy(dstWriter, srcReader)
-	if err != nil {
-		PrintError("CopyFile: io.Copy", err)
-		return err
-	}
-
-	dstWriter.Flush()
-
-	finfo, err := srcFileHandler.Stat()
-	PrintError("CopyFile", err)
-
-	err = os.Chtimes(dstTemp, finfo.ModTime(), finfo.ModTime())
-	PrintError("CopyFile: os.Chtimes", err)
-
-	srcFileHandler.Close()
-	dstFileHandler.Close()
-
-	err = os.Rename(dstTemp, dst)
-	PrintError("CopyFile: os.Rename", err)
-
-	err = os.Chmod(dst, finfo.Mode())
-	PrintError("CopyFile: os.Chmod", err)
-
-	return nil
-}
-
 func MakeDirs(dpath string) error {
 	dpath = ToUnixSlash(dpath)
 	_, err := os.Stat(dpath)
@@ -273,10 +224,9 @@ func GetChanFileToDisk(chanFileNum chan map[string]string, tw *zip.Writer) error
 			if err != nil {
 				PrintError("zip.FileInfoHeader:"+srcPath, err)
 				return err
-			} else {
-				header.Name = dstPath
 			}
 
+			header.Name = dstPath
 			header.Method = zstd.ZipMethodWinZip
 
 			w, err := tw.CreateHeader(header)
