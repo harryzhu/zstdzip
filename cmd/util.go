@@ -210,9 +210,6 @@ func GetChanFileToDisk(chanFileNum chan map[string]string, tw *zip.Writer) error
 
 		if srcPath, ok := cf["srcPath"]; ok {
 			dstPath := cf["dstPath"]
-			if IsDebug {
-				fmt.Printf("%s <== %s\n", dstPath, srcPath)
-			}
 
 			finfo, err := os.Stat(srcPath)
 			if err != nil {
@@ -276,6 +273,9 @@ func CompressDir() error {
 
 	go func() error {
 		defer wg.Done()
+		if IsDryRun {
+			return nil
+		}
 
 		t0 := Target + ".ing"
 		t0FileHandler, t0Writer := OpenZipTempFile(t0)
@@ -289,6 +289,9 @@ func CompressDir() error {
 
 	go func() error {
 		defer wg.Done()
+		if IsDryRun {
+			return nil
+		}
 
 		if !IsSerial {
 			wgCompress := sync.WaitGroup{}
@@ -364,6 +367,8 @@ func CompressDir() error {
 		defer wg.Done()
 
 		var nameInZip string
+		var fsize int64
+		var fmtime time.Time
 
 		regExt := regexp.MustCompile("(?i)" + RegExt)
 
@@ -392,22 +397,25 @@ func CompressDir() error {
 				}
 			}
 
-			if MaxSizeMB != -1 && (finfo.Size() > (MaxSizeMB << 20)) {
+			fsize = finfo.Size()
+			fmtime = finfo.ModTime()
+
+			if MaxSizeMB != -1 && (fsize > (MaxSizeMB << 20)) {
 				return nil
 			}
 
-			if MinSizeMB != -1 && (finfo.Size() < (MinSizeMB << 20)) {
+			if MinSizeMB != -1 && (fsize < (MinSizeMB << 20)) {
 				return nil
 			}
 
 			if MinAge != "" {
-				if finfo.ModTime().Unix() < TimeStr2Unix(MinAge) {
+				if fmtime.Unix() < TimeStr2Unix(MinAge) {
 					return nil
 				}
 			}
 
 			if MaxAge != "" {
-				if finfo.ModTime().Unix() > TimeStr2Unix(MaxAge) {
+				if fmtime.Unix() > TimeStr2Unix(MaxAge) {
 					return nil
 				}
 			}
@@ -417,6 +425,20 @@ func CompressDir() error {
 
 			if nameInZip == "" || nameInZip == "." || nameInZip == ".." {
 				return nil
+			}
+
+			num++
+			if !IsDebug {
+				if num < 100 || num%10 == 0 {
+					PrintSpinner(Int2Str(num))
+				}
+			}
+
+			if IsDryRun || IsDebug {
+				fmt.Println(fmt.Sprintf("%10s %10dMB  %s", fmtime.Format("2006-01-02"), (fsize >> 20), nameInZip))
+				if IsDryRun {
+					return nil
+				}
 			}
 
 			ele, err := SendFileToChanFile(fpath, nameInZip)
@@ -465,13 +487,6 @@ func CompressDir() error {
 				}
 			} else {
 				chanFile <- ele
-			}
-
-			num++
-			if !IsDebug {
-				if num < 100 || num%10 == 0 {
-					PrintSpinner(Int2Str(num))
-				}
 			}
 
 			return nil
@@ -567,6 +582,8 @@ func DecompressFile(fpath string) error {
 	unzipReader.RegisterDecompressor(zstd.ZipMethodWinZip, decomp)
 
 	var dstPath, dstDir string
+	var fsize int64
+	var fmtime time.Time
 
 	num := 0
 	regExt := regexp.MustCompile("(?i)" + RegExt)
@@ -589,28 +606,27 @@ func DecompressFile(fpath string) error {
 			}
 		}
 
-		if MaxSizeMB != -1 && (finfo.Size() > (MaxSizeMB << 20)) {
+		fsize = finfo.Size()
+		fmtime = header.FileInfo().ModTime()
+
+		if MaxSizeMB != -1 && (fsize > (MaxSizeMB << 20)) {
 			continue
 		}
 
-		if MinSizeMB != -1 && (finfo.Size() < (MinSizeMB << 20)) {
+		if MinSizeMB != -1 && (fsize < (MinSizeMB << 20)) {
 			continue
 		}
 
 		if MinAge != "" {
-			if header.FileInfo().ModTime().Unix() < TimeStr2Unix(MinAge) {
+			if fmtime.Unix() < TimeStr2Unix(MinAge) {
 				continue
 			}
 		}
 
 		if MaxAge != "" {
-			if finfo.ModTime().Unix() > TimeStr2Unix(MaxAge) {
+			if fmtime.Unix() > TimeStr2Unix(MaxAge) {
 				continue
 			}
-		}
-
-		if _, err := os.Stat(dstDir); err != nil {
-			MakeDirs(dstDir)
 		}
 
 		atomic.AddInt32(&DeComTotalNum, 1)
@@ -620,8 +636,17 @@ func DecompressFile(fpath string) error {
 			if num < 100 || num%10 == 0 {
 				PrintSpinner(Int2Str(int(atomic.LoadInt32(&DeComTotalNum))))
 			}
-		} else {
-			fmt.Printf("%s ==> %s\n", fzip.Name, dstPath)
+		}
+
+		if IsDryRun || IsDebug {
+			fmt.Println(fmt.Sprintf("%10s %10dMB  %s", fmtime.Format("2006-01-02"), (fsize >> 20), dstPath))
+			if IsDryRun {
+				continue
+			}
+		}
+
+		if _, err := os.Stat(dstDir); err != nil {
+			MakeDirs(dstDir)
 		}
 
 		dst, _ := os.Create(dstPath)
@@ -663,7 +688,7 @@ func DecompressFile(fpath string) error {
 }
 
 func DecompressDirMod() error {
-	if len(DeComDirInfoList) == 0 {
+	if len(DeComDirInfoList) == 0 || IsDryRun == true {
 		return nil
 	}
 
@@ -686,13 +711,13 @@ func DecompressDirMod() error {
 		if finfo.IsDir() {
 			dstPath = ToUnixSlash(fpath)
 			if modtime, ok := modTimeList[finfo.Name()]; ok {
-				DebugInfo("DecompressDirMod", modtime, dstPath)
+				DebugInfo("DecompressDirMod", modtime.Format("2006-01-02 15:04:05"), " ", dstPath)
 				err = os.Chtimes(dstPath, modtime, modtime)
 				PrintError("DecompressDirMod:os.Chtimes", err)
 			}
 
 			if modelist, ok := modeList[finfo.Name()]; ok {
-				DebugInfo("DecompressDirMod", modelist, dstPath)
+				DebugInfo("DecompressDirMod", modelist, " ", dstPath)
 				err = os.Chmod(dstPath, modelist)
 				PrintError("DecompressDirMod:os.Chmod", err)
 			}

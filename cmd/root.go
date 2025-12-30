@@ -23,6 +23,7 @@ var (
 	Sum              string
 	TotalSize        int64
 	Speed            int64
+	IsDryRun         bool
 	IsIgnoreDotFile  bool
 	IsIgnoreEmptyDir bool
 	IsSerial         bool
@@ -71,6 +72,7 @@ func init() {
 	rootCmd.PersistentFlags().IntVar(&Threads, "threads", numCPU, "threads")
 	rootCmd.PersistentFlags().StringVar(&Password, "password", "", "set your password")
 	rootCmd.PersistentFlags().BoolVar(&IsSerial, "serial", false, "optimization for hard disk, not for ssd")
+	rootCmd.PersistentFlags().BoolVar(&IsDryRun, "dry-run", false, "just show result, will not write files")
 	rootCmd.PersistentFlags().BoolVarP(&IsDebug, "debug", "", false, "print debug info")
 
 }
