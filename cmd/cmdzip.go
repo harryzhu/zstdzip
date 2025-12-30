@@ -4,6 +4,7 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"sync/atomic"
@@ -24,16 +25,18 @@ var zipCmd = &cobra.Command{
 	files FILTER:
 	--ignore-dot-file: ;
 	--ignore-empty-dir: ;
-	--regext: ;
+	--regext: regular pattern(Case Insensitive);
 	--min-age: ignore files if file's last-modified-time is earlier than --min-age;
 	--max-age: ignore files if file's last-modified-time is newer than --max-age;
 	--min-size-mb: ignore files if file's size is less than --min-size-mb;
 	--max-size-mb: ignore files if file's size is greater than --max-size-mb;`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		PrintArgs("source", "target", "threads", "serial", "level")
+		PrintArgs("source", "target", "threads", "serial", "level",
+			"min-age", "max-age", "min-size-mb", "max-size-mb", "ext", "ignore-dot-file", "ignore-empty-dir")
 		if strings.HasPrefix(Target, Source) || Source == "" || Target == "" {
 			FatalError("zip", NewError("invalid --source= or --target="))
 		}
+		fmt.Println(" *** start:", timeBoot.Format("15:04:05"), "***")
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		finfo, err := os.Stat(Source)
@@ -57,9 +60,9 @@ func init() {
 	zipCmd.Flags().IntVar(&Level, "level", 1, "compress level: 0 | 1 | 2 | 3 ")
 	//
 	zipCmd.Flags().BoolVar(&IsIgnoreDotFile, "ignore-dot-file", false, "ignore files start with dot(.), i.e.: .DS_Store .Thumb")
-	zipCmd.Flags().BoolVar(&IsIgnoreEmptyDir, "ignore-empty-dir", false, "ignore files start with dot(.), i.e.: .DS_Store .Thumb")
+	zipCmd.Flags().BoolVar(&IsIgnoreEmptyDir, "ignore-empty-dir", false, "ignore empty folder")
 	//
-	zipCmd.Flags().StringVar(&RegExt, "regext", "", "regex pattern of file extension(Case Insensitive). i.e.: .(mp4|txt|png)")
+	zipCmd.Flags().StringVar(&RegExt, "ext", "", "regex pattern of file extension(Case Insensitive). i.e.: .(mp4|txt|png)")
 	//
 	zipCmd.Flags().StringVar(&MinAge, "min-age", "", "format: 20231203150908, means 2023-12-03 15:09:08")
 	zipCmd.Flags().StringVar(&MaxAge, "max-age", "", "format: 20231225235959, means 2023-12-25 23:59:59")

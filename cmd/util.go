@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -26,9 +27,10 @@ import (
 )
 
 func PrintArgs(args ...string) error {
-	if IsDebug == false {
-		return nil
-	}
+	// if IsDebug == false {
+	// 	return nil
+	// }
+	fmt.Println(Green("--------------------"))
 	if Contains(args, "source") {
 		fmt.Println("--source=", Source)
 	}
@@ -53,11 +55,39 @@ func PrintArgs(args ...string) error {
 		fmt.Println("--level=", Level)
 	}
 
+	if Contains(args, "min-age") && MinAge != "" {
+		fmt.Println("--min-age=", TimeStr2Unix(MinAge))
+	}
+
+	if Contains(args, "max-age") && MaxAge != "" {
+		fmt.Println("--max-age=", TimeStr2Unix(MaxAge))
+	}
+
+	if Contains(args, "min-size-mb") && MinSizeMB != -1 {
+		fmt.Println("--min-size-mb=", MinSizeMB)
+	}
+
+	if Contains(args, "max-size-mb") && MaxSizeMB != -1 {
+		fmt.Println("--max-size-mb=", MaxSizeMB)
+	}
+
+	if Contains(args, "ignore-dot-file") {
+		fmt.Println("--ignore-dot-file=", IsIgnoreDotFile)
+	}
+
+	if Contains(args, "ignore-empty-dir") {
+		fmt.Println("--ignore-empty-dir=", IsIgnoreEmptyDir)
+	}
+
+	if Contains(args, "ext") {
+		fmt.Println("--ext=", RegExt)
+	}
+
 	if IsDebug {
 		fmt.Println("--debug=", IsDebug)
 	}
 
-	fmt.Println("")
+	fmt.Println(Green("--------------------"))
 
 	return nil
 }
@@ -388,14 +418,14 @@ func CompressDir() error {
 		regExt := regexp.MustCompile("(?i)" + RegExt)
 
 		num := 0
-		filepath.Walk(Source, func(fpath string, info os.FileInfo, err error) error {
+		filepath.Walk(Source, func(fpath string, finfo os.FileInfo, err error) error {
 			if err != nil {
-				PrintError("CompressFiles: walk", err)
+				PrintError("CompressFiles: walkdir", err)
 				return err
 			}
 
 			if IsIgnoreEmptyDir {
-				if info.IsDir() {
+				if finfo.IsDir() {
 					return nil
 				}
 			}
@@ -412,22 +442,22 @@ func CompressDir() error {
 				}
 			}
 
-			if MaxSizeMB != -1 && (info.Size() > (MaxSizeMB << 20)) {
+			if MaxSizeMB != -1 && (finfo.Size() > (MaxSizeMB << 20)) {
 				return nil
 			}
 
-			if MinSizeMB != -1 && (info.Size() < (MinSizeMB << 20)) {
+			if MinSizeMB != -1 && (finfo.Size() < (MinSizeMB << 20)) {
 				return nil
 			}
 
 			if MinAge != "" {
-				if info.ModTime().Unix() < TimeStr2Unix(MinAge) {
+				if finfo.ModTime().Unix() < TimeStr2Unix(MinAge) {
 					return nil
 				}
 			}
 
 			if MaxAge != "" {
-				if info.ModTime().Unix() > TimeStr2Unix(MaxAge) {
+				if finfo.ModTime().Unix() > TimeStr2Unix(MaxAge) {
 					return nil
 				}
 			}
@@ -590,7 +620,49 @@ func DecompressFile(fpath string) error {
 
 	num := 0
 	regExt := regexp.MustCompile("(?i)" + RegExt)
+
 	for _, fzip := range unzipReader.File {
+		header := fzip.FileHeader
+		finfo := header.FileInfo()
+
+		dstPath = filepath.ToSlash(filepath.Join(Target, fzip.Name))
+		dstDir = filepath.Dir(dstPath)
+
+		if finfo.IsDir() {
+			DeComDirInfoList = append(DeComDirInfoList, fzip)
+			continue
+		}
+
+		if RegExt != "" {
+			if regExt.MatchString(filepath.Ext(fzip.Name)) == false {
+				continue
+			}
+		}
+
+		if MaxSizeMB != -1 && (finfo.Size() > (MaxSizeMB << 20)) {
+			continue
+		}
+
+		if MinSizeMB != -1 && (finfo.Size() < (MinSizeMB << 20)) {
+			continue
+		}
+
+		if MinAge != "" {
+			if header.FileInfo().ModTime().Unix() < TimeStr2Unix(MinAge) {
+				continue
+			}
+		}
+
+		if MaxAge != "" {
+			if finfo.ModTime().Unix() > TimeStr2Unix(MaxAge) {
+				continue
+			}
+		}
+
+		if _, err := os.Stat(dstDir); err != nil {
+			MakeDirs(dstDir)
+		}
+
 		atomic.AddInt32(&DeComTotalNum, 1)
 
 		num++
@@ -598,50 +670,29 @@ func DecompressFile(fpath string) error {
 			if num < 100 || num%10 == 0 {
 				PrintSpinner(Int2Str(int(atomic.LoadInt32(&DeComTotalNum))))
 			}
-		}
-
-		dstPath = filepath.Join(Target, fzip.Name)
-		dstPath = filepath.ToSlash(dstPath)
-		dstDir = filepath.Dir(dstPath)
-
-		if IsDebug {
+		} else {
 			fmt.Printf("%s ==> %s\n", fzip.Name, dstPath)
-		}
-
-		if _, err := os.Stat(dstDir); err != nil {
-			MakeDirs(dstDir)
-		}
-
-		header := fzip.FileHeader
-		if header.FileInfo().IsDir() {
-			DebugInfo("DecompressFile", header.Name)
-			MakeDirs(dstPath)
-			os.Chtimes(dstPath, header.FileInfo().ModTime(), header.FileInfo().ModTime())
-			os.Chmod(dstPath, header.Mode())
-			continue
-		}
-
-		if RegExt != "" {
-			if regExt.MatchString(filepath.Ext(dstPath)) == false {
-				continue
-			}
 		}
 
 		dst, _ := os.Create(dstPath)
 		funzip, err := fzip.Open()
-		PrintError("DecompressFile", err)
+		PrintError("DecompressFile:fzip.Open", err)
 
 		if _, err := io.Copy(dst, funzip); err != nil {
-			PrintError("DecompressFile", err)
+			PrintError("DecompressFile:io.Copy", err)
 		}
 
 		if err := funzip.Close(); err != nil {
-			PrintError("DecompressFile", err)
+			PrintError("DecompressFile:funzip.Close", err)
 		}
 		dst.Close()
 
-		os.Chtimes(dstPath, header.FileInfo().ModTime(), header.FileInfo().ModTime())
-		os.Chmod(dstPath, header.FileInfo().Mode())
+		err = os.Chtimes(dstPath, finfo.ModTime(), finfo.ModTime())
+		PrintError("DecompressFile:os.Chtimes", err)
+
+		err = os.Chmod(dstPath, finfo.Mode())
+		PrintError("DecompressFile:os.Chmod", err)
+
 	}
 
 	if IsDebug {
@@ -657,6 +708,49 @@ func DecompressFile(fpath string) error {
 		}
 		PrintError("DecompressFile", err)
 	}
+
+	return nil
+}
+
+func DecompressDirMod() error {
+	if len(DeComDirInfoList) == 0 {
+		return nil
+	}
+
+	var modTimeList map[string]time.Time = make(map[string]time.Time, 1)
+	var modeList map[string]fs.FileMode = make(map[string]fs.FileMode, 1)
+
+	for _, m := range DeComDirInfoList {
+		info := m.FileInfo()
+		modTimeList[info.Name()] = m.ModTime()
+		modeList[info.Name()] = m.Mode()
+	}
+
+	var dstPath string
+
+	filepath.WalkDir(Target, func(fpath string, finfo fs.DirEntry, err error) error {
+		if err != nil {
+			PrintError("DecompressDirMod", err)
+		}
+
+		if finfo.IsDir() {
+			dstPath = ToUnixSlash(fpath)
+			if modtime, ok := modTimeList[finfo.Name()]; ok {
+				DebugInfo("DecompressDirMod", modtime, dstPath)
+				err = os.Chtimes(dstPath, modtime, modtime)
+				PrintError("DecompressDirMod:os.Chtimes", err)
+			}
+
+			if modelist, ok := modeList[finfo.Name()]; ok {
+				DebugInfo("DecompressDirMod", modelist, dstPath)
+				err = os.Chmod(dstPath, modelist)
+				PrintError("DecompressDirMod:os.Chmod", err)
+			}
+
+		}
+
+		return nil
+	})
 
 	return nil
 }

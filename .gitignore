@@ -5,3 +5,5 @@ data/
 Thumbs.db
 *.exe
 *.zip
+*.test.sh
+local_build.sh

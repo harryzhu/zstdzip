@@ -99,9 +99,5 @@ func textColor(color int, str string) string {
 }
 
 func PrintSpinner(s string) {
-	fmt.Printf(" ... %20.10s\r", s)
-}
-
-func PrintSpinner2(s string, suffix string) {
-	fmt.Printf(" ... %5.10s    %s\r", s, suffix)
+	fmt.Printf(" ::: %10.10s\r", s)
 }

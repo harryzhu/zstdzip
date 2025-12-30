@@ -41,7 +41,6 @@ var rootCmd = &cobra.Command{
 	Short: "(de)compress file(s) in zip format with ZSTD algorithm, is able to keep last-modified-time & permissions",
 	Long:  ``,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		fmt.Println(" *** start:", timeBoot.Format("15:04:05"), "***")
 
 	},
 	Run: func(cmd *cobra.Command, args []string) {
