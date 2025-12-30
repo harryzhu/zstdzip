@@ -1,6 +1,8 @@
 # zstdzip
 compress and decompress via ZSTD with zip format, can keep file's permission and last-modified timestamp.
 
+采用ZSTD算法压缩文件，保存在zip格式包中，`压缩速度更快`、`压缩率更高`、还能`保留源文件的权限`和`最后修改时间`。
+
 ## Performance:
 Faster than `7-Zip`
 
