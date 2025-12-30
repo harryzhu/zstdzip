@@ -11,7 +11,7 @@ Faster than `7-Zip`
 
 
 ## Usage:
-### compress（压缩）:
+### Compress（压缩）:
 
 ```Bash
 ./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip
@@ -19,7 +19,7 @@ Faster than `7-Zip`
 # default: 并行压缩，会自动生成 8 个压缩档
 ```
 
-or:
+or（加密、压缩级别）:
 
 ```Bash
 ./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --level=1  --threads=16 --password=1234
@@ -35,7 +35,7 @@ or:
 
 ```
 
-or:
+or（按大小、时间、后缀名过滤文件）:
 
 ```Bash
 ./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --ignore-dot-file --ignore-empty-dir --ext=".(mp4|txt|png|jpg)" --min-age=20230101081520 --max-age=20230220153045 --min-size-mb=4 --max-size-mb=16
@@ -50,7 +50,7 @@ or:
 #
 ```
 
-or:
+or（机械硬盘中：将默认并行压缩改为传统的串行压缩，保存在单一的压缩包中）:
 
 ```Bash
 ./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --serial
@@ -60,7 +60,7 @@ or:
 
 
 
-### decompress（解压缩）:
+### Decompress（解压缩）:
 
 ```Bash
 ./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/t2
@@ -68,7 +68,7 @@ or:
 # 默认并行解压缩，会自动解压同文件夹下的另外 7 个压缩档 test.zip.1, test.zip.2, test.zip.3 ... test.zip.7
 ```
 
-or:
+or（无需全部解压缩，可以挑选文件解压缩）:
 ```Bash
 ./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/t2 --min-size-mb=4 --min-age=20230215143012 --ext=".mp4"
 
@@ -77,7 +77,7 @@ or:
 # 上面表示： 仅解压文件大小超过4MB，文件最后修改时间晚于 2023-02-15 14:30:12 的后缀名为 .mp4 的文件
 ```
 
-or:
+or（机械硬盘中：串行解压缩）:
 
 ```Bash
 ./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/test --serial
@@ -90,7 +90,7 @@ or:
 
 
 
-### hash sum（哈希）:
+### Hash（哈希）:
 
 ```Bash
 ./zstdzip hash --source=/User/harryzhu/test.zip  --sum=sha256
