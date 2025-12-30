@@ -11,7 +11,7 @@ Faster than `7-Zip`
 
 
 ## Usage:
-### compress:
+### compress（压缩）:
 
 ```Bash
 ./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip
@@ -24,6 +24,7 @@ or:
 ```Bash
 ./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --level=1  --threads=16 --password=1234
 
+# 压缩文件夹 /User/harryzhu/docs 里面的所有文件，保存为 /User/harryzhu/docs.zst.zip
 # --password=1234： 文件使用指定密码加密
 # 对应的，解压（unzip）时，也需要提供该密码才能解压成功
 # --level=0 ｜ 1 ｜ 2 ｜ 3` : 
@@ -37,15 +38,16 @@ or:
 or:
 
 ```Bash
-./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --ignore-dot-file --ignore-empty-dir --regext=".(mp4|txt|png)" --min-age=20230101081520 --max-age=20230220153045 --min-size-mb=4 --max-size-mb=16
+./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --ignore-dot-file --ignore-empty-dir --ext=".(mp4|txt|png|jpg)" --min-age=20230101081520 --max-age=20230220153045 --min-size-mb=4 --max-size-mb=16
 
 # 选择文件夹 /User/harryzhu/docs 中最后修改时间晚于2023年01月01日08:15:20, 且早于2023年02月20日15:30:45,
 # 且文件大小大于4MB小于16MB，
-# 且文件后缀名为 .mp4 或 .txt 或 .png 的文件
+# 且文件后缀名为 .mp4 或 .txt 或 .png 或 .jpg 的文件（不区分大小写）
 # 忽略空文件夹
 # 忽略隐藏文件（点 . 开头的文件名）
 # 保存为 /User/harryzhu/docs.zst.zip 
-# 采用并行压缩，会生成8个文件，每个文件都是完整的压缩文件，可以单独解压缩
+# 默认采用并行压缩，会生成8个文件，每个文件都是完整的压缩文件，可以单独解压缩
+#
 ```
 
 or:
@@ -53,17 +55,26 @@ or:
 ```Bash
 ./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --serial
 
-# --serial: 传统压缩模式, 一个一个压缩，最后保存在一个单一的压缩包内.
+# --serial: 传统压缩模式, 一个一个压缩，最后保存在 1个 单一的压缩包内， 不会自动生成 8个 压缩档
 ```
 
 
 
-### decompress:
+### decompress（解压缩）:
 
 ```Bash
 ./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/t2
 
 # 默认并行解压缩，会自动解压同文件夹下的另外 7 个压缩档 test.zip.1, test.zip.2, test.zip.3 ... test.zip.7
+```
+
+or:
+```Bash
+./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/t2 --min-size-mb=4 --min-age=20230215143012 --ext=".mp4"
+
+# 默认并行解压缩，会自动解压同文件夹下的另外 7 个压缩档 test.zip.1, test.zip.2, test.zip.3 ... test.zip.7
+# 可以用参数指定仅解压符合条件的文件，
+# 上面表示： 仅解压文件大小超过4MB，文件最后修改时间晚于 2023-02-15 14:30:12 的后缀名为 .mp4 的文件
 ```
 
 or:
@@ -79,13 +90,15 @@ or:
 
 
 
-### hash sum:
+### hash sum（哈希）:
 
 ```Bash
 ./zstdzip hash --source=/User/harryzhu/test.zip  --sum=sha256
 
 # 显示文件的哈希：
 # 使用 --sum= 指定哈希算法，支持 md5, sha1, sha256, blake3, xxhash
+# 多用于文件校验
+# 对于超大文件哈希，推荐使用 blake3 或 xxhash 算法
 ```
 
 `--sum` : sum algorithm: md5, sha1, sha256, blake3, xxhash; default is `xxhash`
