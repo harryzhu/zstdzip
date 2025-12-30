@@ -59,7 +59,7 @@ var unzipCmd = &cobra.Command{
 			go func(decomFile string) {
 				defer wg.Done()
 
-				DecompressFile(decomFile)
+				decompressFile(decomFile)
 			}(decomFile)
 
 			if IsSerial {
@@ -69,7 +69,7 @@ var unzipCmd = &cobra.Command{
 		wg.Wait()
 
 		// sync dir's modTime and modePerm
-		DecompressDirMod()
+		decompressDirMod()
 
 		PrintSpinner(Int2Str(int(atomic.LoadInt32(&DeComTotalNum))))
 
@@ -78,6 +78,9 @@ var unzipCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(unzipCmd)
+	rootCmd.MarkFlagRequired("source")
+	rootCmd.MarkFlagRequired("target")
+
 	unzipCmd.Flags().StringVar(&RegExt, "ext", "", "regex pattern of file extension(Case Insensitive). i.e.: .(mp4|txt|png)")
 	//
 	unzipCmd.Flags().StringVar(&MinAge, "min-age", "", "format: 20231203150908, means 2023-12-03 15:09:08")

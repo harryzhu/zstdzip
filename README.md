@@ -112,6 +112,6 @@ or（机械硬盘中：串行解压缩）:
 # 对于超大文件哈希，推荐使用 blake3 或 xxhash 算法
 ```
 
-`--sum` : sum algorithm: md5, sha1, sha256, blake3, xxhash; default is `xxhash`
+`--sum` : sum algorithm: md5, sha1, sha256, blake3, xxhash; default is `sha256`
 
 

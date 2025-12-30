@@ -20,7 +20,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/cespare/xxhash/v2"
+	//"github.com/cespare/xxhash/v2"
 	"github.com/klauspost/compress/zstd"
 	"github.com/zeebo/blake3"
 	"github.com/zeebo/xxh3"
@@ -101,11 +101,6 @@ func ToUnixSlash(s string) string {
 	return strings.ReplaceAll(s, "\\", "/")
 }
 
-func GetXxhashString(b []byte) string {
-	return strconv.FormatUint(xxhash.Sum64(b), 10)
-	//return strconv.FormatUint(xxh3.Hash(b), 10)
-}
-
 func GetMD5String(b []byte) string {
 	hasher := md5.New()
 	hasher.Write(b)
@@ -125,7 +120,34 @@ func Contains(arr []string, target string) bool {
 	return false
 }
 
-func GetCompressLevel(n int) zstd.EncoderLevel {
+func TimeStr2Unix(s string) int64 {
+	layout := "20060102150405"
+	var parsedTime time.Time
+	var err error
+
+	parsedTime, err = time.ParseInLocation(layout, s, time.Local)
+
+	if err != nil {
+		PrintError("TimeStr2Unix", err)
+		os.Exit(0)
+	}
+
+	return parsedTime.Unix()
+}
+
+func MakeDirs(dpath string) error {
+	dpath = ToUnixSlash(dpath)
+	_, err := os.Stat(dpath)
+	if err != nil {
+		DebugInfo("MakeDirs", dpath)
+		err = os.MkdirAll(dpath, os.ModePerm)
+		PrintError("MakeDirs:MkdirAll", err)
+		return err
+	}
+	return nil
+}
+
+func getCompressLevel(n int) zstd.EncoderLevel {
 	cLevel := zstd.SpeedDefault
 	switch n {
 	case 0:
@@ -143,11 +165,11 @@ func GetCompressLevel(n int) zstd.EncoderLevel {
 	return cLevel
 }
 
-func OpenZipTempFile(zipTempFile string) (zipTempFileHandler *os.File, zipTempWriter *zip.Writer) {
+func openZipTempFile(zipTempFile string) (zipTempFileHandler *os.File, zipTempWriter *zip.Writer) {
 	compr := zstd.ZipCompressor(
 		zstd.WithWindowSize(1<<20),
 		zstd.WithEncoderConcurrency(Threads),
-		zstd.WithEncoderLevel(GetCompressLevel(Level)),
+		zstd.WithEncoderLevel(getCompressLevel(Level)),
 		zstd.WithEncoderCRC(false))
 
 	var err error
@@ -162,7 +184,7 @@ func OpenZipTempFile(zipTempFile string) (zipTempFileHandler *os.File, zipTempWr
 	return zipTempFileHandler, zipTempWriter
 }
 
-func CloseZipTempFile(zipTempFile string, zipTempFileHandler *os.File, zipTempWriter *zip.Writer) {
+func closeZipTempFile(zipTempFile string, zipTempFileHandler *os.File, zipTempWriter *zip.Writer) {
 	zipTempWriter.Close()
 	zipTempFileHandler.Close()
 
@@ -176,19 +198,7 @@ func CloseZipTempFile(zipTempFile string, zipTempFileHandler *os.File, zipTempWr
 	FatalError("OpenZipTempFile", err)
 }
 
-func MakeDirs(dpath string) error {
-	dpath = ToUnixSlash(dpath)
-	_, err := os.Stat(dpath)
-	if err != nil {
-		DebugInfo("MakeDirs", dpath)
-		err = os.MkdirAll(dpath, os.ModePerm)
-		PrintError("MakeDirs:MkdirAll", err)
-		return err
-	}
-	return nil
-}
-
-func SendFileToChanFile(srcPath string, dstPath string) (ele map[string]string, err error) {
+func sendFileToChanFile(srcPath string, dstPath string) (ele map[string]string, err error) {
 	srcPath = ToUnixSlash(srcPath)
 	dstPath = ToUnixSlash(dstPath)
 
@@ -200,7 +210,7 @@ func SendFileToChanFile(srcPath string, dstPath string) (ele map[string]string, 
 	return ele, nil
 }
 
-func GetChanFileToDisk(chanFileNum chan map[string]string, tw *zip.Writer) error {
+func getChanFileToDisk(chanFileNum chan map[string]string, tw *zip.Writer) error {
 	for {
 		cf := <-chanFileNum
 		if val, ok := cf["_COPYSTATUS"]; ok {
@@ -256,7 +266,7 @@ func GetChanFileToDisk(chanFileNum chan map[string]string, tw *zip.Writer) error
 	return nil
 }
 
-func CompressDir() error {
+func compressDir() error {
 	var qcap int = 10
 	var chanFile chan map[string]string = make(chan map[string]string, qcap)
 	var chanFile1 chan map[string]string = make(chan map[string]string, qcap)
@@ -278,11 +288,11 @@ func CompressDir() error {
 		}
 
 		t0 := Target + ".ing"
-		t0FileHandler, t0Writer := OpenZipTempFile(t0)
+		t0FileHandler, t0Writer := openZipTempFile(t0)
 
-		GetChanFileToDisk(chanFile, t0Writer)
+		getChanFileToDisk(chanFile, t0Writer)
 
-		CloseZipTempFile(t0, t0FileHandler, t0Writer)
+		closeZipTempFile(t0, t0FileHandler, t0Writer)
 
 		return nil
 	}()
@@ -300,65 +310,65 @@ func CompressDir() error {
 			var t1Writer, t2Writer, t3Writer, t4Writer, t5Writer, t6Writer, t7Writer *zip.Writer
 
 			t1 = Target + ".1.ing"
-			t1FileHandler, t1Writer = OpenZipTempFile(t1)
+			t1FileHandler, t1Writer = openZipTempFile(t1)
 
 			t2 = Target + ".2.ing"
-			t2FileHandler, t2Writer = OpenZipTempFile(t2)
+			t2FileHandler, t2Writer = openZipTempFile(t2)
 
 			t3 = Target + ".3.ing"
-			t3FileHandler, t3Writer = OpenZipTempFile(t3)
+			t3FileHandler, t3Writer = openZipTempFile(t3)
 
 			t4 = Target + ".4.ing"
-			t4FileHandler, t4Writer = OpenZipTempFile(t4)
+			t4FileHandler, t4Writer = openZipTempFile(t4)
 
 			t5 = Target + ".5.ing"
-			t5FileHandler, t5Writer = OpenZipTempFile(t5)
+			t5FileHandler, t5Writer = openZipTempFile(t5)
 
 			t6 = Target + ".6.ing"
-			t6FileHandler, t6Writer = OpenZipTempFile(t6)
+			t6FileHandler, t6Writer = openZipTempFile(t6)
 
 			t7 = Target + ".7.ing"
-			t7FileHandler, t7Writer = OpenZipTempFile(t7)
+			t7FileHandler, t7Writer = openZipTempFile(t7)
 
 			wgCompress.Add(7)
 			go func() {
 				defer wgCompress.Done()
-				GetChanFileToDisk(chanFile1, t1Writer)
+				getChanFileToDisk(chanFile1, t1Writer)
 			}()
 			go func() {
 				defer wgCompress.Done()
-				GetChanFileToDisk(chanFile2, t2Writer)
+				getChanFileToDisk(chanFile2, t2Writer)
 			}()
 			go func() {
 				defer wgCompress.Done()
-				GetChanFileToDisk(chanFile3, t3Writer)
+				getChanFileToDisk(chanFile3, t3Writer)
 			}()
 			go func() {
 				defer wgCompress.Done()
-				GetChanFileToDisk(chanFile4, t4Writer)
+				getChanFileToDisk(chanFile4, t4Writer)
 			}()
 			go func() {
 				defer wgCompress.Done()
-				GetChanFileToDisk(chanFile5, t5Writer)
+				getChanFileToDisk(chanFile5, t5Writer)
 			}()
 			go func() {
 				defer wgCompress.Done()
-				GetChanFileToDisk(chanFile6, t6Writer)
+				getChanFileToDisk(chanFile6, t6Writer)
 			}()
 			go func() {
 				defer wgCompress.Done()
-				GetChanFileToDisk(chanFile7, t7Writer)
+				getChanFileToDisk(chanFile7, t7Writer)
 			}()
 
 			wgCompress.Wait()
 
-			CloseZipTempFile(t1, t1FileHandler, t1Writer)
-			CloseZipTempFile(t2, t2FileHandler, t2Writer)
-			CloseZipTempFile(t3, t3FileHandler, t3Writer)
-			CloseZipTempFile(t4, t4FileHandler, t4Writer)
-			CloseZipTempFile(t5, t5FileHandler, t5Writer)
-			CloseZipTempFile(t6, t6FileHandler, t6Writer)
-			CloseZipTempFile(t7, t7FileHandler, t7Writer)
+			closeZipTempFile(t1, t1FileHandler, t1Writer)
+			closeZipTempFile(t2, t2FileHandler, t2Writer)
+			closeZipTempFile(t3, t3FileHandler, t3Writer)
+			closeZipTempFile(t4, t4FileHandler, t4Writer)
+			closeZipTempFile(t5, t5FileHandler, t5Writer)
+			closeZipTempFile(t6, t6FileHandler, t6Writer)
+			closeZipTempFile(t7, t7FileHandler, t7Writer)
 		}
 		return nil
 	}()
@@ -441,7 +451,7 @@ func CompressDir() error {
 				}
 			}
 
-			ele, err := SendFileToChanFile(fpath, nameInZip)
+			ele, err := sendFileToChanFile(fpath, nameInZip)
 			if err != nil {
 				return err
 			}
@@ -513,7 +523,7 @@ func CompressDir() error {
 	return nil
 }
 
-func CompressFile(finfo os.FileInfo) error {
+func compressFile(finfo os.FileInfo) error {
 	header, err := zip.FileInfoHeader(finfo)
 	if err != nil {
 		FatalError(Source, err)
@@ -527,7 +537,7 @@ func CompressFile(finfo os.FileInfo) error {
 	header.Method = zstd.ZipMethodWinZip
 
 	t0 := Target + ".ing"
-	t0FileHandler, t0Writer := OpenZipTempFile(t0)
+	t0FileHandler, t0Writer := openZipTempFile(t0)
 
 	fp, err := os.Open(Source)
 	if err != nil {
@@ -552,12 +562,12 @@ func CompressFile(finfo os.FileInfo) error {
 
 	fp.Close()
 
-	CloseZipTempFile(t0, t0FileHandler, t0Writer)
+	closeZipTempFile(t0, t0FileHandler, t0Writer)
 
 	return nil
 }
 
-func DecompressFile(fpath string) error {
+func decompressFile(fpath string) error {
 	var fh *os.File
 	var err error
 
@@ -687,7 +697,7 @@ func DecompressFile(fpath string) error {
 	return nil
 }
 
-func DecompressDirMod() error {
+func decompressDirMod() error {
 	if len(DeComDirInfoList) == 0 || IsDryRun == true {
 		return nil
 	}
@@ -730,7 +740,7 @@ func DecompressDirMod() error {
 	return nil
 }
 
-func HashFile(m string) string {
+func hashFile(m string) string {
 	var hasher hash.Hash
 	switch m {
 	case "xxhash":
@@ -769,19 +779,4 @@ func HashFile(m string) string {
 
 	fh.Close()
 	return hex.EncodeToString(hasher.Sum(nil))
-}
-
-func TimeStr2Unix(s string) int64 {
-	layout := "20060102150405"
-	var parsedTime time.Time
-	var err error
-
-	parsedTime, err = time.ParseInLocation(layout, s, time.Local)
-
-	if err != nil {
-		PrintError("TimeStr2Unix", err)
-		os.Exit(0)
-	}
-
-	return parsedTime.Unix()
 }

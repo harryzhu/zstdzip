@@ -45,10 +45,10 @@ var zipCmd = &cobra.Command{
 		}
 
 		if finfo.IsDir() {
-			CompressDir()
+			compressDir()
 			PrintSpinner(Int2Str(int(atomic.LoadInt32(&DeComTotalNum))))
 		} else {
-			CompressFile(finfo)
+			compressFile(finfo)
 		}
 
 	},
@@ -56,6 +56,8 @@ var zipCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(zipCmd)
+	rootCmd.MarkFlagRequired("source")
+	rootCmd.MarkFlagRequired("target")
 
 	zipCmd.Flags().IntVar(&Level, "level", 1, "compress level: 0 | 1 | 2 | 3 ")
 	//
