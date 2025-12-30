@@ -60,7 +60,16 @@ or（机械硬盘中：将默认并行压缩改为传统的串行压缩，保存
 # --serial: 传统压缩模式, 一个一个压缩，最后保存在 1个 单一的压缩包内， 不会自动生成 8个 压缩档
 ```
 
+or（ dry-run 模式：只查看即将 压缩/解压缩 的文件列表，不会实际写入文件）:
 
+```Bash
+./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --dry-run
+
+./zstdzip unzip --source=/User/harryzhu/docs.zst.zip  --target=/User/harryzhu/docs --dry-run
+
+# --dry-run: 不写入文件，仅显示即将压缩或解压缩的文件列表，用于查看过滤的文件是否符合预期
+#
+```
 
 ### Decompress（解压缩）:
 
