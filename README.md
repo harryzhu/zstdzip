@@ -18,7 +18,7 @@ compress and decompress via ZSTD with zip format, can keep file's permission and
 `7-Zip`: 
 
 * compress same data above: `22 minutes 34 seconds`，在 PCIe 4.0 和 3.0上速度几乎一样;
-* 采用“不压缩、仅存储”选项: `4 minutes 46 seconds`(PCIe 4.0)
+* 采用“不压缩、仅存储”选项: `4 minutes 43 seconds`(PCIe 4.0)
 
 
 ## Usage:
