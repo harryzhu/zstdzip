@@ -14,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -108,7 +107,7 @@ func GetMD5String(b []byte) string {
 }
 
 func Int2Str(n int) string {
-	return strconv.Itoa(n)
+	return fmt.Sprintf("%d", n)
 }
 
 func Contains(arr []string, target string) bool {
@@ -121,7 +120,7 @@ func Contains(arr []string, target string) bool {
 }
 
 func TimeStr2Unix(s string) int64 {
-	layout := "20060102150405"
+	layout := "2006-01-02,15:04:05"
 	var parsedTime time.Time
 	var err error
 
@@ -144,6 +143,27 @@ func MakeDirs(dpath string) error {
 		PrintError("MakeDirs:MkdirAll", err)
 		return err
 	}
+	return nil
+}
+
+func Int64ToTGMK(n int64) string {
+	switch {
+	case n >= TB:
+		return fmt.Sprintf("%.2f TB", float64(n)/float64(TB))
+	case n >= GB:
+		return fmt.Sprintf("%.2f GB", float64(n)/float64(GB))
+	case n >= MB:
+		return fmt.Sprintf("%.2f MB", float64(n)/float64(MB))
+	case n >= KB:
+		return fmt.Sprintf("%.2f KB", float64(n)/float64(KB))
+	default:
+		return fmt.Sprintf("%d B", n)
+	}
+	return "[error]"
+}
+
+func printFileInfo(fpath string, fsize int64, fmtime time.Time) error {
+	fmt.Println(fmt.Sprintf("%20s %12s  %s", fmtime.Format("2006-01-02,15:04:05"), Int64ToTGMK(fsize), fpath))
 	return nil
 }
 
@@ -196,6 +216,46 @@ func closeZipTempFile(zipTempFile string, zipTempFileHandler *os.File, zipTempWr
 	TargetFile := strings.Replace(zipTempFile, ".ing", "", 1)
 	err := os.Rename(zipTempFile, TargetFile)
 	FatalError("OpenZipTempFile", err)
+}
+
+func isFileMatched(fpath string, fsize int64, fmtime time.Time, fextreg *regexp.Regexp) bool {
+	if fpath == "" || fpath == "." || fpath == ".." {
+		return false
+	}
+
+	if RegExt != "" {
+		if fextreg.MatchString(filepath.Ext(fpath)) == false {
+			return false
+		}
+	}
+
+	if MaxSizeMB != -1 && (fsize > (MaxSizeMB << 20)) {
+		return false
+	}
+
+	if MinSizeMB != -1 && (fsize < (MinSizeMB << 20)) {
+		return false
+	}
+
+	if MinAge != "" {
+		if fmtime.Unix() < TimeStr2Unix(MinAge) {
+			return false
+		}
+	}
+
+	if MaxAge != "" {
+		if fmtime.Unix() > TimeStr2Unix(MaxAge) {
+			return false
+		}
+	}
+
+	if IsIgnoreDotFile {
+		if strings.HasPrefix(filepath.Base(fpath), ".") {
+			return false
+		}
+	}
+
+	return true
 }
 
 func sendFileToChanFile(srcPath string, dstPath string) (ele map[string]string, err error) {
@@ -379,53 +439,22 @@ func compressDir() error {
 		var nameInZip string
 		var fsize int64
 		var fmtime time.Time
-
-		regExt := regexp.MustCompile("(?i)" + RegExt)
+		fextReg := regexp.MustCompile("(?i)" + RegExt)
 
 		num := 0
 		filepath.Walk(Source, func(fpath string, finfo os.FileInfo, err error) error {
 			if err != nil {
-				PrintError("CompressFiles: walkdir", err)
+				PrintError("CompressDir: walkdir", err)
 				return err
-			}
-
-			if IsIgnoreEmptyDir {
-				if finfo.IsDir() {
-					return nil
-				}
-			}
-
-			if IsIgnoreDotFile {
-				if strings.HasPrefix(filepath.Base(fpath), ".") {
-					return nil
-				}
-			}
-
-			if RegExt != "" {
-				if regExt.MatchString(filepath.Ext(fpath)) == false {
-					return nil
-				}
 			}
 
 			fsize = finfo.Size()
 			fmtime = finfo.ModTime()
 
-			if MaxSizeMB != -1 && (fsize > (MaxSizeMB << 20)) {
-				return nil
-			}
-
-			if MinSizeMB != -1 && (fsize < (MinSizeMB << 20)) {
-				return nil
-			}
-
-			if MinAge != "" {
-				if fmtime.Unix() < TimeStr2Unix(MinAge) {
-					return nil
-				}
-			}
-
-			if MaxAge != "" {
-				if fmtime.Unix() > TimeStr2Unix(MaxAge) {
+			if finfo.IsDir() {
+				num--
+			} else {
+				if isFileMatched(fpath, fsize, fmtime, fextReg) == false {
 					return nil
 				}
 			}
@@ -437,6 +466,12 @@ func compressDir() error {
 				return nil
 			}
 
+			ele, err := sendFileToChanFile(fpath, nameInZip)
+			if err != nil {
+				PrintError("CompressDir:sendFileToChanFile", err)
+				return err
+			}
+
 			num++
 			if !IsDebug {
 				if num < 100 || num%10 == 0 {
@@ -445,15 +480,11 @@ func compressDir() error {
 			}
 
 			if IsDryRun || IsDebug {
-				fmt.Println(fmt.Sprintf("%10s %10dMB  %s", fmtime.Format("2006-01-02"), (fsize >> 20), nameInZip))
-				if IsDryRun {
-					return nil
-				}
+				printFileInfo(nameInZip, fsize, fmtime)
 			}
 
-			ele, err := sendFileToChanFile(fpath, nameInZip)
-			if err != nil {
-				return err
+			if IsDryRun {
+				return nil
 			}
 
 			if !IsSerial {
@@ -502,7 +533,10 @@ func compressDir() error {
 			return nil
 		})
 
-		PrintSpinner(Int2Str(num))
+		// because of the root directory, plus 1
+		num = num + 1
+		PrintSpinner(fmt.Sprintf("%d", num))
+
 		atomic.StoreInt32(&DeComTotalNum, int32(num))
 
 		copyDone := make(map[string]string)
@@ -533,7 +567,6 @@ func compressFile(finfo os.FileInfo) error {
 	nameInPath := filepath.Base(fpath)
 
 	header.Name = nameInPath
-
 	header.Method = zstd.ZipMethodWinZip
 
 	t0 := Target + ".ing"
@@ -557,7 +590,6 @@ func compressFile(finfo os.FileInfo) error {
 			PrintError(Source, err)
 			return err
 		}
-
 	}
 
 	fp.Close()
@@ -596,11 +628,14 @@ func decompressFile(fpath string) error {
 	var fmtime time.Time
 
 	num := 0
-	regExt := regexp.MustCompile("(?i)" + RegExt)
+	fextReg := regexp.MustCompile("(?i)" + RegExt)
 
 	for _, fzip := range unzipReader.File {
 		header := fzip.FileHeader
 		finfo := header.FileInfo()
+
+		fsize = finfo.Size()
+		fmtime = header.FileInfo().ModTime()
 
 		dstPath = filepath.ToSlash(filepath.Join(Target, fzip.Name))
 		dstDir = filepath.Dir(dstPath)
@@ -609,34 +644,12 @@ func decompressFile(fpath string) error {
 			DeComLock.Lock()
 			DeComDirInfoList = append(DeComDirInfoList, fzip)
 			DeComLock.Unlock()
-			continue
-		}
-
-		if RegExt != "" {
-			if regExt.MatchString(filepath.Ext(fzip.Name)) == false {
-				continue
+			if IsIgnoreEmptyDir == false {
+				MakeDirs(dstPath)
 			}
-		}
-
-		fsize = finfo.Size()
-		fmtime = header.FileInfo().ModTime()
-
-		if MaxSizeMB != -1 && (fsize > (MaxSizeMB << 20)) {
 			continue
-		}
-
-		if MinSizeMB != -1 && (fsize < (MinSizeMB << 20)) {
-			continue
-		}
-
-		if MinAge != "" {
-			if fmtime.Unix() < TimeStr2Unix(MinAge) {
-				continue
-			}
-		}
-
-		if MaxAge != "" {
-			if fmtime.Unix() > TimeStr2Unix(MaxAge) {
+		} else {
+			if isFileMatched(fzip.Name, fsize, fmtime, fextReg) == false {
 				continue
 			}
 		}
@@ -646,15 +659,16 @@ func decompressFile(fpath string) error {
 		num++
 		if !IsDebug {
 			if num < 100 || num%10 == 0 {
-				PrintSpinner(Int2Str(int(atomic.LoadInt32(&DeComTotalNum))))
+				PrintSpinner(fmt.Sprintf("%d", atomic.LoadInt32(&DeComTotalNum)))
 			}
 		}
 
 		if IsDryRun || IsDebug {
-			fmt.Println(fmt.Sprintf("%10s %10dMB  %s", fmtime.Format("2006-01-02"), (fsize >> 20), dstPath))
-			if IsDryRun {
-				continue
-			}
+			printFileInfo(dstPath, fsize, fmtime)
+		}
+
+		if IsDryRun {
+			continue
 		}
 
 		if _, err := os.Stat(dstDir); err != nil {

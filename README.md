@@ -6,7 +6,7 @@ compress and decompress via ZSTD with zip format, can keep file's permission and
 ## Performance:
 Faster than `7-Zip`
 
-`zstdzip`: compress 563GB (246,516 mp4 files): `10 minutes 6 seconds`; decompress: `8 minutes 56 seconds`;
+`zstdzip`: compress 200GB (246,516 mp4 files): `2 minutes 46 seconds`; decompress: `1 minutes 48 seconds`;
 
 `7-Zip`: compress same data above: `63 minutes 24 seconds`;
 
@@ -40,13 +40,12 @@ or（加密、压缩级别）:
 or（按大小、时间、后缀名过滤文件）:
 
 ```Bash
-./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --ignore-dot-file --ignore-empty-dir --ext=".(mp4|txt|png|jpg)" --min-age=20230101081520 --max-age=20230220153045 --min-size-mb=4 --max-size-mb=16
+./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --ignore-dot-file --ext=".(mp4|txt|png|jpg)" --min-age=20230101081520 --max-age=20230220153045 --min-size-mb=4 --max-size-mb=16
 
 # 选择文件夹 /User/harryzhu/docs 中最后修改时间晚于2023年01月01日08:15:20, 且早于2023年02月20日15:30:45,
 # 且文件大小大于4MB小于16MB，
 # 且文件后缀名为 .mp4 或 .txt 或 .png 或 .jpg 的文件（不区分大小写）
-# 忽略空文件夹
-# 忽略隐藏文件（点 . 开头的文件名）
+# 忽略文件名以点 . 开头的文件
 # 保存为 /User/harryzhu/docs.zst.zip 
 # 默认采用并行压缩，会生成8个文件，每个文件都是完整的压缩文件，可以单独解压缩
 #
@@ -81,11 +80,12 @@ or（ dry-run 模式：只查看即将 压缩/解压缩 的文件列表，不会
 
 or（无需全部解压缩，可以挑选文件解压缩）:
 ```Bash
-./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/t2 --min-size-mb=4 --min-age=20230215143012 --ext=".mp4"
+./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/t2 --min-size-mb=4 --min-age=20230215143012 --ext=".mp4" --ignore-empty-dir
 
 # 默认并行解压缩，会自动解压同文件夹下的另外 7 个压缩档 test.zip.1, test.zip.2, test.zip.3 ... test.zip.7
 # 可以用参数指定仅解压符合条件的文件，
-# 上面表示： 仅解压文件大小超过4MB，文件最后修改时间晚于 2023-02-15 14:30:12 的后缀名为 .mp4 的文件
+# 上面表示： 仅解压文件大小超过4MB，文件最后修改时间晚于 2023-02-15 14:30:12 的后缀名为 .mp4 的文件， 
+# --ignore-empty-dir 默认会忽略空文件夹，避免从大量文件中解压小部分文件会生成大量空文件夹，如果需要这些空文件夹，设置 --ignore-empty-dir=false 即可
 ```
 
 or（机械硬盘中：串行解压缩）:

@@ -33,6 +33,13 @@ var (
 	MinSizeMB int64
 )
 
+const (
+	KB int64 = 1 << 10
+	MB int64 = 1 << 20
+	GB int64 = 1 << 30
+	TB int64 = 1 << 40
+)
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "zstdzip [zip | unzip | hash] [options]",

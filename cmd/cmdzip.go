@@ -43,7 +43,9 @@ var zipCmd = &cobra.Command{
 
 		if finfo.IsDir() {
 			compressDir()
-			PrintSpinner(Int2Str(int(atomic.LoadInt32(&DeComTotalNum))))
+			if IsDebug || IsDryRun {
+				PrintSpinner(Int2Str(int(atomic.LoadInt32(&DeComTotalNum))))
+			}
 		} else {
 			compressFile(finfo)
 		}
@@ -59,12 +61,11 @@ func init() {
 	zipCmd.Flags().IntVar(&Level, "level", 1, "compress level: 0 | 1 | 2 | 3 ")
 	//
 	zipCmd.Flags().BoolVar(&IsIgnoreDotFile, "ignore-dot-file", false, "ignore files start with dot(.), i.e.: .DS_Store .Thumb")
-	zipCmd.Flags().BoolVar(&IsIgnoreEmptyDir, "ignore-empty-dir", false, "ignore empty folder")
 	//
 	zipCmd.Flags().StringVar(&RegExt, "ext", "", "regex pattern of file extension(Case Insensitive). i.e.: .(mp4|txt|png)")
 	//
-	zipCmd.Flags().StringVar(&MinAge, "min-age", "", "format: 20231203150908, means 2023-12-03 15:09:08")
-	zipCmd.Flags().StringVar(&MaxAge, "max-age", "", "format: 20231225235959, means 2023-12-25 23:59:59")
+	zipCmd.Flags().StringVar(&MinAge, "min-age", "", "format: 2023-12-03,15:09:08, means 2023-12-03 15:09:08")
+	zipCmd.Flags().StringVar(&MaxAge, "max-age", "", "format: 2023-12-25,23:59:59, means 2023-12-25 23:59:59")
 	//
 	zipCmd.Flags().Int64Var(&MinSizeMB, "min-size-mb", -1, "i.e.: 16 means 16MB, 16*1024*1024")
 	zipCmd.Flags().Int64Var(&MaxSizeMB, "max-size-mb", -1, "i.e.: 32 means 32MB, 32*1024*1024")
