@@ -94,7 +94,7 @@ or（机械硬盘中：串行解压缩）:
 ./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/test --serial
 
 # --serial : 一次只解压一个压缩档，如果不指定该参数，默认会同时解压缩8个压缩档，在SSD上面解压缩性能极速提升.
-# 但在机械硬盘上，应该显示指定`--serial`，io性能会更好。
+# 但在机械硬盘上，应该显式指定`--serial`，io性能会更好。
 ```
 
 
