@@ -4,7 +4,7 @@ compress and decompress via ZSTD with zip format, can keep file's permission and
 采用ZSTD算法压缩文件，保存在zip格式包中，`压缩速度更快`、`压缩率更高`、还能`保留源文件的权限`和`最后修改时间`。
 
 ## Performance:
-### Faster than `7-Zip`
+### Much Faster than `7-Zip`
 
 `zstdzip`: compress `200GB` (`86,929` mp4 files): `2 minutes 46 seconds`; decompress: `1 minutes 48 seconds`(宏碁GM7（PCIe 4.0）) 或者 `3 minutes 34 seconds`（SanDisk（PCIe 3.0））; 在并行模式下，压缩/解压缩 的速度完全依赖于数据所在SSD的写入速度;
 
