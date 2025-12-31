@@ -6,9 +6,17 @@ compress and decompress via ZSTD with zip format, can keep file's permission and
 ## Performance:
 ### Much Faster than `7-Zip`
 
-`zstdzip`: compress `200GB` (`86,929` mp4 files): `2 minutes 46 seconds`; decompress: `1 minutes 48 seconds`(宏碁GM7（PCIe 4.0）) 或者 `3 minutes 34 seconds`（SanDisk（PCIe 3.0））; 在并行模式下，压缩/解压缩 的速度完全依赖于数据所在SSD的写入速度;
+数据量： `200GB` (`86,929` mp4 files)
 
-`7-Zip`: compress same data above: `22 minutes 34 seconds`;
+`zstdzip`: 
+
+* compress（压缩） : `2 minutes 46 seconds`; 
+* decompress（解压缩）: `1 minutes 48 seconds`(宏碁GM7（PCIe 4.0）) 或者 `3 minutes 34 seconds`（SanDisk（PCIe 3.0））; 
+* 在并行模式下，压缩/解压缩 的速度完全依赖于数据所在SSD的写入速度;
+
+`7-Zip`: 
+
+* compress same data above: `22 minutes 34 seconds`，在 PCIe 4.0 和 3.0上速度几乎一样;
 
 
 ## Usage:
