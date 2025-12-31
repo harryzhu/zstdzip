@@ -29,7 +29,8 @@ var unzipCmd = &cobra.Command{
 	--max-size-mb= :, 
 	--ext= : regular pattern(Case Insensitive)`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		PrintArgs("source", "target", "threads", "serial", "min-age", "max-age", "min-size-mb", "max-size-mb", "ext")
+		PrintArgs("source", "target", "threads", "serial", "min-age", "max-age", "min-size-mb", "max-size-mb",
+			"ext", "ignore-dot-file", "ignore-empty-dir")
 		if Source == Target || Source == "" || Target == "" {
 			FatalError("unzip", NewError("invalid --source= or --target="))
 		}

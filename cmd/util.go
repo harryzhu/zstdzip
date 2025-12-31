@@ -55,19 +55,19 @@ func PrintArgs(args ...string) error {
 	}
 
 	if Contains(args, "min-age") && MinAge != "" {
-		fmt.Println("--min-age=", TimeStr2Unix(MinAge))
+		fmt.Printf("--min-age=%d (%s)\n", TimeStr2Unix(MinAge), MinAge)
 	}
 
 	if Contains(args, "max-age") && MaxAge != "" {
-		fmt.Println("--max-age=", TimeStr2Unix(MaxAge))
+		fmt.Printf("--max-age=%d (%s)\n", TimeStr2Unix(MaxAge), MaxAge)
 	}
 
 	if Contains(args, "min-size-mb") && MinSizeMB != -1 {
-		fmt.Println("--min-size-mb=", MinSizeMB)
+		fmt.Printf("--min-size-mb= %d MB\n", MinSizeMB)
 	}
 
 	if Contains(args, "max-size-mb") && MaxSizeMB != -1 {
-		fmt.Println("--max-size-mb=", MaxSizeMB)
+		fmt.Printf("--max-size-mb= %d MB\n", MaxSizeMB)
 	}
 
 	if Contains(args, "ignore-dot-file") {
@@ -127,7 +127,7 @@ func TimeStr2Unix(s string) int64 {
 	parsedTime, err = time.ParseInLocation(layout, s, time.Local)
 
 	if err != nil {
-		PrintError("TimeStr2Unix", err)
+		PrintError("TimeStr2Unix", NewError(err.Error()+". Correct Format: "+layout))
 		os.Exit(0)
 	}
 

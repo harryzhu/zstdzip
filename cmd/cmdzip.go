@@ -28,11 +28,16 @@ var zipCmd = &cobra.Command{
 	--min-size-mb: ignore files if file's size is less than --min-size-mb;
 	--max-size-mb: ignore files if file's size is greater than --max-size-mb;`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// change IsIgnoreEmptyDir default value from unzipCmd
+		// zipCmd: IsIgnoreEmptyDir is always false
+		IsIgnoreEmptyDir = false
+
 		PrintArgs("source", "target", "threads", "serial", "level",
 			"min-age", "max-age", "min-size-mb", "max-size-mb", "ext", "ignore-dot-file", "ignore-empty-dir")
 		if strings.HasPrefix(Target, Source) || Source == "" || Target == "" {
 			FatalError("zip", NewError("invalid --source= or --target="))
 		}
+
 		fmt.Println(" *** start:", timeBoot.Format("15:04:05"), "***")
 	},
 	Run: func(cmd *cobra.Command, args []string) {
