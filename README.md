@@ -40,7 +40,7 @@ or（加密、压缩级别）:
 or（按大小、时间、后缀名过滤文件）:
 
 ```Bash
-./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --ignore-dot-file --ext=".(mp4|txt|png|jpg)" --min-age=20230101081520 --max-age=20230220153045 --min-size-mb=4 --max-size-mb=16
+./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --ignore-dot-file --ext=".(mp4|txt|png|jpg)" --min-age=2023-01-01,08:15:20 --max-age=2023-02-20,15:30:45 --min-size-mb=4 --max-size-mb=16
 
 # 选择文件夹 /User/harryzhu/docs 中最后修改时间晚于2023年01月01日08:15:20, 且早于2023年02月20日15:30:45,
 # 且文件大小大于4MB小于16MB，
@@ -80,7 +80,7 @@ or（ dry-run 模式：只查看即将 压缩/解压缩 的文件列表，不会
 
 or（无需全部解压缩，可以挑选文件解压缩）:
 ```Bash
-./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/t2 --min-size-mb=4 --min-age=20230215143012 --ext=".mp4" --ignore-empty-dir
+./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/t2 --min-size-mb=4 --min-age=2023-02-15,14:30:12 --ext=".mp4" --ignore-empty-dir
 
 # 默认并行解压缩，会自动解压同文件夹下的另外 7 个压缩档 test.zip.1, test.zip.2, test.zip.3 ... test.zip.7
 # 可以用参数指定仅解压符合条件的文件，
