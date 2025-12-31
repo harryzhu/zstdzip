@@ -610,12 +610,12 @@ func decompressFile(fpath string) error {
 		fh, err = os.Open(fpath)
 	}
 
-	FatalError("DecompressFile", err)
+	FatalError("decompressFile", err)
 
 	finfo, _ := fh.Stat()
 
 	unzipReader, err := zip.NewReader(fh, finfo.Size())
-	FatalError("DecompressFile", err)
+	FatalError("decompressFile", err)
 
 	decomp := zstd.ZipDecompressor(
 		zstd.WithDecoderConcurrency(Threads),
@@ -677,22 +677,22 @@ func decompressFile(fpath string) error {
 
 		dst, _ := os.Create(dstPath)
 		funzip, err := fzip.Open()
-		PrintError("DecompressFile:fzip.Open", err)
+		PrintError("decompressFile:fzip.Open", err)
 
 		if _, err := io.Copy(dst, funzip); err != nil {
-			PrintError("DecompressFile:io.Copy", err)
+			PrintError("decompressFile:io.Copy", err)
 		}
 
 		if err := funzip.Close(); err != nil {
-			PrintError("DecompressFile:funzip.Close", err)
+			PrintError("decompressFile:funzip.Close", err)
 		}
 		dst.Close()
 
 		err = os.Chtimes(dstPath, finfo.ModTime(), finfo.ModTime())
-		PrintError("DecompressFile:os.Chtimes", err)
+		PrintError("decompressFile:os.Chtimes", err)
 
 		err = os.Chmod(dstPath, finfo.Mode())
-		PrintError("DecompressFile:os.Chmod", err)
+		PrintError("decompressFile:os.Chmod", err)
 
 	}
 
@@ -707,7 +707,7 @@ func decompressFile(fpath string) error {
 		if err == nil {
 			os.Remove(fpath + ".decrypted")
 		}
-		PrintError("DecompressFile", err)
+		PrintError("decompressFile", err)
 	}
 
 	return nil

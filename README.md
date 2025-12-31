@@ -6,9 +6,9 @@ compress and decompress via ZSTD with zip format, can keep file's permission and
 ## Performance:
 Faster than `7-Zip`
 
-`zstdzip`: compress 200GB (246,516 mp4 files): `2 minutes 46 seconds`; decompress: `1 minutes 48 seconds`;
+`zstdzip`: compress `200GB` (`86,929` mp4 files): `2 minutes 46 seconds`; decompress: `1 minutes 48 seconds`;
 
-`7-Zip`: compress same data above: `63 minutes 24 seconds`;
+`7-Zip`: compress same data above: `22 minutes 44 seconds`;
 
 
 
