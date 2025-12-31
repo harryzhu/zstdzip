@@ -13,10 +13,12 @@ compress and decompress via ZSTD with zip format, can keep file's permission and
 * compress（压缩） : `2 minutes 46 seconds`; 
 * decompress（解压缩）: `1 minutes 48 seconds`(宏碁GM7（PCIe 4.0）) 或者 `3 minutes 34 seconds`（SanDisk（PCIe 3.0））; 
 * 在并行模式下，压缩/解压缩 的速度完全依赖于数据所在SSD的写入速度;
+* 在传统模式下（添加 `--serial`参数，开启串行模式）, `11 minutes 8 seconds`（PCIe 4.0）;
 
 `7-Zip`: 
 
 * compress same data above: `22 minutes 34 seconds`，在 PCIe 4.0 和 3.0上速度几乎一样;
+* 采用“不压缩、仅存储”选项: `4 minutes 46 seconds`(PCIe 4.0)
 
 
 ## Usage:
