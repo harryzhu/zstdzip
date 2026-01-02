@@ -32,11 +32,11 @@ zstdzip(--serial)  | 11m 8s       |  |
 
 压缩方式 | 时间(越短越好) | 压缩后大小(越小越好)
 --------|--------------|--------
-zstdzip(默认)       |  1m 14s       | 7.37GB
-zstdzip(--level=2) |  1m 14s       | 6.79GB
+zstdzip(默认)       |  *1m 14s*       | 7.37GB
+zstdzip(--level=2) |  1m 15s       | 6.79GB
 zstdzip(--level=3) |  2m 19s       | 6.58GB
 zstdzip(--serial)  |  3m 21s       | 7.37GB
-7zip ( .7z)        | 14m 46s      | 4.89GB
+7zip ( .7z)        | 14m 46s      | *4.89GB*
 7zip ( .zip)       |  5m 17s      | 10.76GB
 
 

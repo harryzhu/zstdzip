@@ -31,10 +31,12 @@ var zipCmd = &cobra.Command{
 		// change IsIgnoreEmptyDir default value from unzipCmd
 		// zipCmd: IsIgnoreEmptyDir is always false
 		IsIgnoreEmptyDir = false
+		Source = ToUnixSlash(Source)
+		Target = ToUnixSlash(Target)
 
 		PrintArgs("source", "target", "threads", "serial", "level",
 			"min-age", "max-age", "min-size-mb", "max-size-mb", "ext", "ignore-dot-file", "ignore-empty-dir")
-		if strings.HasPrefix(Target, Source) || Source == "" || Target == "" {
+		if strings.HasPrefix(Target, strings.TrimRight(Source, "/")+"/") || Source == "" || Target == "" {
 			FatalError("zip", NewError("invalid --source= or --target="))
 		}
 
