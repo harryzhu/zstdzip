@@ -6,7 +6,13 @@ compress and decompress via ZSTD with zip format, can keep file's permission and
 ## Performance:
 ### Much Faster than `7-Zip`
 
-数据量： `200GB` (`86,929` mp4 files)
+#### 数据量： `200GB` (`86,929` .mp4 files)
+
+压缩方式 | 压缩时间(越短越好) | 解压缩时间(越小越好)[PCIe 4.0] | 解压缩时间(越小越好)[PCIe 3.0]
+--------|--------------|--------
+zstdzip(默认)       | 2m 46s       | 1m 48s  |  3m 34s
+zstdzip(--serial)  | 11m 8s       |  |
+7zip               | 22m 34s      |  |
 
 `zstdzip`: 
 
@@ -19,6 +25,18 @@ compress and decompress via ZSTD with zip format, can keep file's permission and
 
 * compress same data above: `22 minutes 34 seconds`，在 PCIe 4.0 和 3.0上速度几乎一样;
 * 采用“不压缩、仅存储”选项: `4 minutes 43 seconds`(PCIe 4.0)
+
+
+#### 数据量：`101,478`个 .txt 文件，共`53.08GB`
+
+压缩方式 | 时间(越短越好) | 压缩后大小(越小越好)
+--------|--------------|--------
+zstdzip(默认)       |  1m 14s       | 7.37GB
+zstdzip(--level=2) |  1m 14s       | 6.79GB
+zstdzip(--level=3) |  2m 19s       | 6.58GB
+zstdzip(--serial)  |  3m 21s       | 7.37GB
+7zip ( .7z)        | 14m 46s      | 4.89GB
+7zip ( .zip)       |  5m 17s      | 10.76GB
 
 
 ## Usage:
