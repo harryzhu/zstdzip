@@ -8,11 +8,12 @@ compress and decompress via ZSTD with zip format, can keep file's permission and
 
 #### 数据量： `200GB` (`86,929` .mp4 files)
 
+
 压缩方式 | 压缩时间(越短越好) | 解压缩时间(越小越好)[PCIe 4.0] | 解压缩时间(越小越好)[PCIe 3.0]
---------|--------------|--------
+--------|-----------------|-----------------------------|--------
 zstdzip(默认)       | 2m 46s       | 1m 48s  |  3m 34s
-zstdzip(--serial)  | 11m 8s       |  |
-7zip               | 22m 34s      |  |
+zstdzip(--serial)  | 11m 8s       |  | 
+7zip               | 22m 34s      |  | 
 
 `zstdzip`: 
 
