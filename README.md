@@ -44,18 +44,19 @@ zstdzip(--serial)  |  3m 21s       | 7.37GB
 ### Compress（压缩）:
 
 ```Bash
-./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip
+./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zstd.zip 
 
-# default: 并行压缩，会自动生成 8 个压缩档
+# default: 串行压缩，会自动生成 1 个压缩档
+# 添加 --serial=false： 并行压缩，会自动生成 8 个压缩档， 适用于SSD硬盘，超多文件压缩
 ```
 
 or（加密、压缩级别）:
 
 ```Bash
-./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --level=1  --threads=16 --password=1234
+./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zstd.zip  --level=1  --password=123
 
 # 压缩文件夹 /User/harryzhu/docs 里面的所有文件，保存为 /User/harryzhu/docs.zst.zip
-# --password=1234： 文件使用指定密码加密
+# --password=123： 文件使用指定密码加密
 # 对应的，解压（unzip）时，也需要提供该密码才能解压成功
 # --level=0 ｜ 1 ｜ 2 ｜ 3` : 
 #   0: fastest without compression, 
@@ -68,61 +69,40 @@ or（加密、压缩级别）:
 or（按大小、时间、后缀名过滤文件）:
 
 ```Bash
-./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --ignore-dot-file --ext=".(mp4|txt|png|jpg)" --min-age=2023-01-01,08:15:20 --max-age=2023-02-20,15:30:45 --min-size-mb=4 --max-size-mb=16
+./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zstd.zip  --ignore-dot-file --ext=".(mp4|txt|png|jpg)" --min-age=2023-01-01,08:15:20 --max-age=2023-02-20,15:30:45 --min-size-mb=4 --max-size-mb=16
 
 # 选择文件夹 /User/harryzhu/docs 中最后修改时间晚于2023年01月01日08:15:20, 且早于2023年02月20日15:30:45,
 # 且文件大小大于4MB小于16MB，
 # 且文件后缀名为 .mp4 或 .txt 或 .png 或 .jpg 的文件（不区分大小写）
 # 忽略文件名以点 . 开头的文件
 # 保存为 /User/harryzhu/docs.zst.zip 
-# 默认采用并行压缩，会生成8个文件，每个文件都是完整的压缩文件，可以单独解压缩
-#
+# 默认采用串行压缩，会生成1个文件，
+# 如果文件非常多（且在固态SSD硬盘上），可以添加 --serial=false 参数，并行压缩，会生成8个文件，每个文件都是完整的压缩文件，可以单独解压缩（如果有一个损坏，不影响其他压缩包）
 ```
 
-or（机械硬盘中：将默认并行压缩改为传统的串行压缩，保存在单一的压缩包中）:
+or（机械硬盘中：将并行压缩改为传统的串行压缩，保存在单一的压缩包中）:
 
 ```Bash
-./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --serial
+./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zstd.zip  --serial
 
 # --serial: 传统压缩模式, 一个一个压缩，最后保存在 1个 单一的压缩包内， 不会自动生成 8个 压缩档
-```
-
-or（ dry-run 模式：只查看即将 压缩/解压缩 的文件列表，不会实际写入文件）:
-
-```Bash
-./zstdzip zip --source=/User/harryzhu/docs  --target=/User/harryzhu/docs.zst.zip  --dry-run
-
-./zstdzip unzip --source=/User/harryzhu/docs.zst.zip  --target=/User/harryzhu/docs --dry-run
-
-# --dry-run: 不写入文件，仅显示即将压缩或解压缩的文件列表，用于查看过滤的文件是否符合预期
-#
 ```
 
 ### Decompress（解压缩）:
 
 ```Bash
-./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/t2
+./zstdzip unzip --source=/User/harryzhu/test.zstd.zip  --target=/User/harryzhu/t2
 
-# 默认并行解压缩，会自动解压同文件夹下的另外 7 个压缩档 test.zip.1, test.zip.2, test.zip.3 ... test.zip.7
-```
-
-or（无需全部解压缩，可以挑选文件解压缩）:
-```Bash
-./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/t2 --min-size-mb=4 --min-age=2023-02-15,14:30:12 --ext=".mp4" --ignore-empty-dir
-
-# 默认并行解压缩，会自动解压同文件夹下的另外 7 个压缩档 test.zip.1, test.zip.2, test.zip.3 ... test.zip.7
-# 可以用参数指定仅解压符合条件的文件，
-# 上面表示： 仅解压文件大小超过4MB，文件最后修改时间晚于 2023-02-15 14:30:12 的后缀名为 .mp4 的文件， 
-# --ignore-empty-dir 默认会忽略空文件夹，避免从大量文件中解压小部分文件会生成大量空文件夹，如果需要这些空文件夹，设置 --ignore-empty-dir=false 即可
+# 默认串行解压缩，会自动解压同文件夹下的另外 7 个压缩档 test.zstd.zip.1, test.zstd.zip.2, test.zstd.zip.3 ... test.zstd.zip.7
 ```
 
 or（机械硬盘中：串行解压缩）:
 
 ```Bash
-./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/test --serial
+./zstdzip unzip --source=/User/harryzhu/test.zip  --target=/User/harryzhu/test --serial=false
 
-# --serial : 一次只解压一个压缩档，如果不指定该参数，默认会同时解压缩8个压缩档，在SSD上面解压缩性能极速提升.
-# 但在机械硬盘上，应该显式指定`--serial`，io性能会更好。
+# --serial=false: 同时解压缩8个压缩档，在SSD上面解压缩性能极速提升.
+# 但在机械硬盘上，可以显式指定`--serial`，io性能会更好。
 ```
 
 
@@ -142,4 +122,14 @@ or（机械硬盘中：串行解压缩）:
 
 `--sum` : sum algorithm: md5, sha1, sha256, blake3, xxhash; default is `sha256`
 
+
+```Bash
+./zstdzip hash --source=/User/harryzhu/folder --target=/User/harryzhu/folder_hash  --sum=xxhash
+
+# 如果 --source= 是文件夹：
+# 使用 --sum= 指定哈希算法，支持 md5, sha1, sha256, blake3, xxhash
+# 递归对文件夹中的所有文件进行hash
+# 并将结果保存在 --target= 中指定的文件
+# 会保存两种格式， json 格式（格式：路径：hash值），以及 txt 格式（一行一个文件，格式： 哈希值：路径）
+```
 

@@ -1,19 +1,12 @@
 package cmd
 
 import (
-	"archive/zip"
-	"fmt"
-	"os"
+	"path/filepath"
+	"strings"
 	"sync"
-	"sync/atomic"
+	"time"
 
 	"github.com/spf13/cobra"
-)
-
-var (
-	DeComTotalNum    int32
-	DeComDirInfoList []*zip.File
-	DeComLock        sync.Mutex
 )
 
 // unzipCmd represents the unzip command
@@ -29,48 +22,56 @@ var unzipCmd = &cobra.Command{
 	--max-size-mb= :, 
 	--ext= : regular pattern(Case Insensitive)`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		PrintArgs("source", "target", "threads", "serial", "min-age", "max-age", "min-size-mb", "max-size-mb",
-			"ext", "ignore-dot-file", "ignore-empty-dir")
-		if Source == Target || Source == "" || Target == "" {
-			FatalError("unzip", NewError("invalid --source= or --target="))
+		positionalArgs(args)
+		//
+		if Source == "" || Source == Target {
+			FatalError("unzip", NewError("--source= or --target= cannot be empty or same"))
 		}
-		fmt.Println(" *** start:", timeBoot.Format("15:04:05"), "***")
 
+		if Target == "" {
+			ext := filepath.Ext(Source)
+			autoTarget := strings.TrimSuffix(Source, ext)
+			Target = strings.TrimSuffix(autoTarget, ".zip")
+			Target = strings.TrimSuffix(Target, ".zstd")
+			if FileExists(Target) {
+				Target = strings.Join([]string{Target, "(2)"}, " ")
+			}
+		}
+		if Target != "" {
+			MakeDirs(Target)
+		}
+
+		argsValidate()
+		bootstrap()
+
+		timeBoot = time.Now()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		if FileExists(Source) {
+			taskDecompressFile(Source)
+		} else {
+			FatalError("unzip", NewError("file does not exist: --source=", Source))
+		}
 
-		var decomFile string
+		//
+
 		wg := sync.WaitGroup{}
-		for idx := range 8 {
-			if idx == 0 {
-				decomFile = Source
-			} else {
-				decomFile = Source + "." + Int2Str(idx)
-			}
 
-			_, err := os.Stat(decomFile)
-
-			if err != nil {
-				continue
-			}
-			DebugInfo("unzip", decomFile)
-			wg.Add(1)
-			go func(decomFile string) {
-				defer wg.Done()
-
-				decompressFile(decomFile)
-			}(decomFile)
-
-			if IsSerial {
-				wg.Wait()
+		for num := 1; num < 8; num++ {
+			s := strings.Join([]string{Source, Int2Str(num)}, ".")
+			if FileExists(s) {
+				DebugInfo("unzip: Extracting", s)
+				wg.Add(1)
+				go func(s string) {
+					defer wg.Done()
+					taskDecompressFile(s)
+				}(s)
+				if IsSerial {
+					wg.Wait()
+				}
 			}
 		}
 		wg.Wait()
-
-		// sync dir's modTime and modePerm
-		decompressDirMod()
-
-		PrintSpinner(Int2Str(int(atomic.LoadInt32(&DeComTotalNum))))
 
 	},
 }

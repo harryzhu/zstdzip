@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"runtime"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -13,14 +12,14 @@ var (
 	timeBoot time.Time
 	Source   string
 	Target   string
-	Threads  int
+	numCPU   int
 	Level    int
 	//
 	Password         string
+	AESMethod        string
 	Sum              string
 	TotalSize        int64
 	Speed            int64
-	IsDryRun         bool
 	IsIgnoreDotFile  bool
 	IsIgnoreEmptyDir bool
 	IsSerial         bool
@@ -46,7 +45,7 @@ var rootCmd = &cobra.Command{
 	Short: "(de)compress file(s) in zip format with ZSTD algorithm, is able to keep last-modified-time & permissions",
 	Long:  ``,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-
+		timeBoot = time.Now()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -69,14 +68,13 @@ func Execute() {
 
 func init() {
 	timeBoot = time.Now()
-	numCPU := runtime.NumCPU()
 
 	rootCmd.PersistentFlags().StringVar(&Source, "source", "", "source file or folder")
-	rootCmd.PersistentFlags().StringVar(&Target, "target", "", "target file, saved.zstd.zip")
-	rootCmd.PersistentFlags().IntVar(&Threads, "threads", numCPU, "threads")
-	rootCmd.PersistentFlags().StringVar(&Password, "password", "", "set your password")
-	rootCmd.PersistentFlags().BoolVar(&IsSerial, "serial", false, "optimization for hard disk, not for ssd")
-	rootCmd.PersistentFlags().BoolVar(&IsDryRun, "dry-run", false, "just show result, will not write files")
+	rootCmd.PersistentFlags().StringVar(&Target, "target", "", "target file, savepath.zstd.zip")
+
+	rootCmd.PersistentFlags().StringVar(&Password, "password", "", "set encryption / decryption password")
+	rootCmd.PersistentFlags().StringVar(&AESMethod, "aes-method", "gcm", "aes method: gcm / ctr")
+	rootCmd.PersistentFlags().BoolVar(&IsSerial, "serial", true, "optimization for hard disk, not for ssd")
 	rootCmd.PersistentFlags().BoolVarP(&IsDebug, "debug", "", false, "print debug info")
 
 }

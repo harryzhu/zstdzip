@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
+	"path/filepath"
 	"strings"
-	"sync/atomic"
+	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -28,34 +28,81 @@ var zipCmd = &cobra.Command{
 	--min-size-mb: ignore files if file's size is less than --min-size-mb;
 	--max-size-mb: ignore files if file's size is greater than --max-size-mb;`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		// change IsIgnoreEmptyDir default value from unzipCmd
-		// zipCmd: IsIgnoreEmptyDir is always false
-		IsIgnoreEmptyDir = false
-		Source = ToUnixSlash(Source)
-		Target = ToUnixSlash(Target)
-
-		PrintArgs("source", "target", "threads", "serial", "level",
-			"min-age", "max-age", "min-size-mb", "max-size-mb", "ext", "ignore-dot-file", "ignore-empty-dir")
-		if strings.HasPrefix(Target, strings.TrimRight(Source, "/")+"/") || Source == "" || Target == "" {
-			FatalError("zip", NewError("invalid --source= or --target="))
+		positionalArgs(args)
+		//
+		if Target == "" {
+			ext := filepath.Ext(Source)
+			autoTarget := strings.TrimSuffix(Source, ext)
+			Target = strings.Join([]string{autoTarget, "zstd.zip"}, ".")
 		}
 
-		fmt.Println(" *** start:", timeBoot.Format("15:04:05"), "***")
+		if Source == "" || Target == "" {
+			FatalError("zip", NewError("--source= or --target= cannot be empty"))
+		}
+		if Target != "" {
+			MakeDirs(filepath.Dir(Target))
+		}
+
+		argsValidate()
+		bootstrap()
+
+		timeBoot = time.Now()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		finfo, err := os.Stat(Source)
-		if err != nil {
-			FatalError("zip", err)
+		wg := sync.WaitGroup{}
+		//
+		if IsSerial {
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+				taskGetChanFileToOneArchive(0)
+			}()
+		} else {
+			wg.Add(8)
+
+			go func() {
+				defer wg.Done()
+				taskGetChanFileToOneArchive(0)
+			}()
+			go func() {
+				defer wg.Done()
+				taskGetChanFileToOneArchive(1)
+			}()
+			go func() {
+				defer wg.Done()
+				taskGetChanFileToOneArchive(2)
+			}()
+			go func() {
+				defer wg.Done()
+				taskGetChanFileToOneArchive(3)
+			}()
+			go func() {
+				defer wg.Done()
+				taskGetChanFileToOneArchive(4)
+			}()
+			go func() {
+				defer wg.Done()
+				taskGetChanFileToOneArchive(5)
+			}()
+			go func() {
+				defer wg.Done()
+				taskGetChanFileToOneArchive(6)
+			}()
+			go func() {
+				defer wg.Done()
+				taskGetChanFileToOneArchive(7)
+			}()
+
 		}
 
-		if finfo.IsDir() {
-			compressDir()
-			if IsDebug || IsDryRun {
-				PrintSpinner(Int2Str(int(atomic.LoadInt32(&DeComTotalNum))))
-			}
-		} else {
-			compressFile(finfo)
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			taskSendFileToChan()
+		}()
+
+		wg.Wait()
 
 	},
 }
@@ -67,7 +114,7 @@ func init() {
 
 	zipCmd.Flags().IntVar(&Level, "level", 1, "compress level: 0 | 1 | 2 | 3 ")
 	//
-	zipCmd.Flags().BoolVar(&IsIgnoreDotFile, "ignore-dot-file", false, "ignore files start with dot(.), i.e.: .DS_Store .Thumb")
+	zipCmd.Flags().BoolVar(&IsIgnoreDotFile, "ignore-dot-file", true, "ignore files start with dot(.), i.e.: .DS_Store .Thumb")
 	//
 	zipCmd.Flags().StringVar(&RegExt, "ext", "", "regex pattern of file extension(Case Insensitive). i.e.: .(mp4|txt|png)")
 	//

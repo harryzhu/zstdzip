@@ -1,5 +1,6 @@
 dist/
 data/
+_bak
 .DS_Store
 [Dd]esktop.ini
 Thumbs.db

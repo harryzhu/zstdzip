@@ -1,183 +1,379 @@
 package cmd
 
 import (
-	"bufio"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/md5"
+	"crypto/rand"
 	"crypto/sha256"
-	"io"
-
 	"encoding/hex"
-
+	"io"
 	"os"
 )
 
-const AESCHUNKSIZE int64 = 16 << 20
-const AESBLOCKSIZE int = 16
-
-// PwdKey length can be 16
-
-var (
-	pwdKey []byte
-	ivKey  []byte
-)
-
 type CryptFile struct {
-	SrcPath  string
-	DstPath  string
-	Password string
+	SrcPath   string
+	DstPath   string
+	Password  string
+	passKey   []byte
+	blockSize int
 }
 
 func NewCryptFile(srcpath string, dstpath string, pswd string) *CryptFile {
 	if pswd == "" {
-		FatalError("NewCryptFile", NewError("password cannot be empty"))
+		PrintError("NewCryptFile", NewError("password cannot be empty"))
 	}
 
 	cf := &CryptFile{
-		SrcPath:  srcpath,
-		DstPath:  dstpath,
-		Password: pswd,
+		SrcPath:   srcpath,
+		DstPath:   dstpath,
+		Password:  pswd,
+		blockSize: 32,
 	}
 
-	cf.setKeyPasswordIV()
+	cf.setPassKey()
 
 	return cf
 }
 
-func (cf *CryptFile) AESEncode() {
-	aesEncodeFile(cf.SrcPath, cf.DstPath)
+func (cf *CryptFile) AESEncode(method string) {
+	DebugInfo("AESEncode", cf.blockSize, ":", string(cf.passKey))
+	if method == "ctr" {
+		ctrEncryptFile(cf.SrcPath, cf.DstPath, cf.passKey)
+	}
+	if method == "gcm" {
+		gcmEncryptFile(cf.SrcPath, cf.DstPath, cf.passKey)
+	}
 }
 
-func (cf *CryptFile) AESDecode() {
-	aesDecodeFile(cf.SrcPath, cf.DstPath)
+func (cf *CryptFile) AESDecode(method string) {
+	if method == "ctr" {
+		ctrDecryptFile(cf.SrcPath, cf.DstPath, cf.passKey)
+	}
+	if method == "gcm" {
+		gcmDecryptFile(cf.SrcPath, cf.DstPath, cf.passKey)
+	}
+}
+
+func (cf *CryptFile) WithBlockSize(size int) *CryptFile {
+	switch {
+	case size == 32:
+		cf.blockSize = 32
+	case size == 24:
+		cf.blockSize = 24
+	default:
+		cf.blockSize = 16
+	}
+
+	return cf
 }
 
 // ------------
 
-func (cf *CryptFile) setKeyPasswordIV() *CryptFile {
-	var salt string = SHA256("Cu5t0m-s@lt")
+func (cf *CryptFile) setPassKey() *CryptFile {
+	var salt string = _sha256("Cu5t0m-s@lt")
 
 	if cf.Password == "" {
-		FatalError("setKeyPasswordIV", NewError("you did not set any password"))
+		PrintError("setPassKey", NewError("you did not set any password"))
 	}
 
-	pk := SHA256(MD5(cf.Password) + ":" + salt)
-	ivk := SHA256(MD5(pk) + ":" + salt)
+	pk := _sha256(_md5(cf.Password) + ":" + salt)
 
-	pwdKey = []byte(pk)[:AESBLOCKSIZE]
-	ivKey = []byte(ivk)[:AESBLOCKSIZE]
+	//AESBLOCKSIZE: 16(AES-128)/24(AES-192)/32(AES-256) 字节
+	var aesBlockSize int = cf.blockSize
+	cf.passKey = []byte(pk)[:aesBlockSize]
 
-	if pwdKey == nil || ivKey == nil {
-		FatalError("setKeyPasswordIV", NewError("password and iv key cannot be empty"))
+	if cf.passKey == nil {
+		PrintError("setPassKey", NewError("passKey key cannot be empty"))
 	}
 
 	return cf
 }
 
-func aesEncodeFile(src string, dst string) {
-	fsrc, err := os.Open(src)
-	FatalError("aesEncodeFile", err)
-
-	defer fsrc.Close()
-	dst_temp := dst + ".temp"
-	fdst, fhdst := NewBufWriter(dst_temp)
-
-	iv := []byte(ivKey)
-
-	block, err := aes.NewCipher(pwdKey)
-	FatalError("aesEncodeFile", err)
-
-	stream := cipher.NewCTR(block, iv)
-
-	srcReader := bufio.NewReader(fsrc)
-	buf := make([]byte, AESCHUNKSIZE)
-
-	for {
-		n, err := srcReader.Read(buf)
-		if n == 0 {
-			if err == io.EOF {
-				break
-			}
-
-			if err != nil {
-				PrintError("aesEncodeFile", err)
-				break
-			}
-		}
-		encByte := make([]byte, n)
-		stream.XORKeyStream(encByte, buf[:n])
-
-		_, err = fdst.Write(encByte)
-		FatalError("aesEncodeFile", err)
-	}
-	fdst.Flush()
-	fhdst.Close()
-
-	os.Rename(dst_temp, dst)
-}
-
-func aesDecodeFile(src string, dst string) {
-	fsrc, err := os.Open(src)
-	FatalError("aesDecodeFile", err)
-	defer fsrc.Close()
-
-	dst_temp := dst + ".temp"
-	fdst, fhdst := NewBufWriter(dst_temp)
-
-	iv := []byte(ivKey)
-
-	block, err := aes.NewCipher(pwdKey)
-	FatalError("aesDecodeFile", err)
-
-	stream := cipher.NewCTR(block, iv)
-
-	srcReader := bufio.NewReader(fsrc)
-	buf := make([]byte, AESCHUNKSIZE)
-
-	for {
-		n, err := srcReader.Read(buf)
-
-		if n == 0 {
-			if err == io.EOF {
-				break
-			}
-
-			if err != nil {
-				PrintError("aesDecodeFile", err)
-				break
-			}
-		}
-		decByte := make([]byte, n)
-		stream.XORKeyStream(decByte, buf[:n])
-
-		_, err = fdst.Write(decByte)
-		FatalError("aesDecodeFile", err)
-	}
-	fdst.Flush()
-	fhdst.Close()
-
-	os.Rename(dst_temp, dst)
-}
-
-func MD5(s string) string {
+func _md5(s string) string {
 	h := md5.New()
 	h.Write([]byte(s))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func SHA256(s string) string {
+func _sha256(s string) string {
 	h := sha256.New()
 	h.Write([]byte(s))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func NewBufWriter(f string) (*bufio.Writer, *os.File) {
-	fh, err := os.Create(f)
+// -----
+
+func ctrEncryptFile(src string, dst string, pwdKey []byte) error {
+	fsrc, err := os.Open(src)
 	if err != nil {
-		fh.Close()
-		FatalError("NewBufWriter", err)
+		PrintError("ctrEncryptFile", err)
+		return err
 	}
 
-	return bufio.NewWriter(fh), fh
+	block, err := aes.NewCipher(pwdKey)
+	if err != nil {
+		PrintError("ctrEncryptFile", err)
+		return err
+	}
+
+	iv := make([]byte, aes.BlockSize)
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		PrintError("ctrEncryptFile", err)
+		return err
+	}
+
+	dstTemp := dst + ".ing"
+	fdst, err := os.Create(dstTemp)
+	if err != nil {
+		PrintError("ctrEncryptFile", err)
+		return err
+	}
+
+	if _, err := fdst.Write(iv); err != nil {
+		PrintError("ctrEncryptFile", err)
+		return err
+	}
+
+	stream := cipher.NewCTR(block, iv)
+
+	AesChunkSize := 128 << 10
+	buf := make([]byte, AesChunkSize)
+	dstWriter := &cipher.StreamWriter{S: stream, W: fdst}
+
+	for {
+		n, err := fsrc.Read(buf)
+		if n > 0 {
+			if _, err := dstWriter.Write(buf[:n]); err != nil {
+				PrintError("ctrEncryptFile", err)
+				return err
+			}
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+	}
+	//
+	fdst.Close()
+	fsrc.Close()
+
+	err = os.Rename(dstTemp, dst)
+	return err
+}
+
+func ctrDecryptFile(src string, dst string, pwdKey []byte) error {
+	fsrc, err := os.Open(src)
+	if err != nil {
+		PrintError("ctrDecryptFile", err)
+		return err
+	}
+	defer fsrc.Close()
+
+	dstTemp := dst + ".ing"
+	fdst, err := os.Create(dstTemp)
+	if err != nil {
+		PrintError("ctrDecryptFile", err)
+		return err
+	}
+
+	block, err := aes.NewCipher(pwdKey)
+	if err != nil {
+		PrintError("ctrDecryptFile", err)
+		return err
+	}
+
+	iv := make([]byte, aes.BlockSize)
+	if _, err := io.ReadFull(fsrc, iv); err != nil {
+		PrintError("ctrDecryptFile", err)
+		return err
+	}
+
+	stream := cipher.NewCTR(block, iv)
+
+	AesChunkSize := 128 << 10
+	buf := make([]byte, AesChunkSize)
+	srcReader := &cipher.StreamReader{S: stream, R: fsrc}
+
+	for {
+		n, err := srcReader.Read(buf)
+		if n > 0 {
+			if _, err := fdst.Write(buf[:n]); err != nil {
+				PrintError("ctrDecryptFile", err)
+				return err
+			}
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	fdst.Close()
+	fsrc.Close()
+
+	err = os.Rename(dstTemp, dst)
+	return err
+}
+
+// EncryptFile AES-GCM 加密文件（高性能流式）
+// srcPath: 源文件路径
+// dstPath: 加密后文件路径
+// key: 32 字节(AES-256)/24 字节(AES-192)/16 字节(AES-128)
+func gcmEncryptFile(srcPath, dstPath string, pwdKey []byte) error {
+	// 打开源文件
+	srcFile, err := os.Open(srcPath)
+	if err != nil {
+		PrintError("gcmEncryptFile", err)
+		return err
+	}
+
+	// 创建目标文件
+	dstTemp := dstPath + ".ing"
+	dstFile, err := os.Create(dstTemp)
+	if err != nil {
+		PrintError("gcmEncryptFile", err)
+		return err
+	}
+
+	// 初始化 AES 密码块
+	block, err := aes.NewCipher(pwdKey)
+	if err != nil {
+		PrintError("gcmEncryptFile", err)
+		return err
+	}
+
+	// 初始化 GCM 模式
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		PrintError("gcmEncryptFile", err)
+		return err
+	}
+
+	// 生成随机 nonce（GCM 标准：12 字节，最高性能）
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		PrintError("gcmEncryptFile", err)
+		return err
+	}
+
+	// 写入 nonce（解密时必须先读取）
+	if _, err := dstFile.Write(nonce); err != nil {
+		PrintError("gcmEncryptFile", err)
+		return err
+	}
+
+	// 预分配缓冲区（零分配核心）
+	AesChunkSize := 128 << 10
+	buf := make([]byte, AesChunkSize)
+	cipherBuf := make([]byte, AesChunkSize+gcm.Overhead())
+
+	// 流式加密
+	for {
+		// 读取文件块
+		n, err := srcFile.Read(buf)
+		if n > 0 {
+			// GCM 加密（无内存拷贝）
+			cipherBuf = gcm.Seal(cipherBuf[:0], nonce, buf[:n], nil)
+			// 写入加密数据
+			if _, err := dstFile.Write(cipherBuf); err != nil {
+				PrintError("gcmEncryptFile", err)
+				return err
+			}
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	dstFile.Close()
+	srcFile.Close()
+
+	err = os.Rename(dstTemp, dstPath)
+
+	return err
+}
+
+// DecryptFile AES-GCM 解密文件（高性能流式）
+// srcPath: 加密文件路径
+// dstPath: 解密后文件路径
+// key: 与加密时相同的密钥
+func gcmDecryptFile(srcPath, dstPath string, pwdKey []byte) error {
+	// 打开加密文件
+	srcFile, err := os.Open(srcPath)
+	if err != nil {
+		PrintError("gcmDecryptFile", err)
+		return err
+	}
+
+	// 创建解密文件
+	dstTemp := dstPath + ".ing"
+	dstFile, err := os.Create(dstTemp)
+	if err != nil {
+		PrintError("gcmDecryptFile", err)
+		return err
+	}
+
+	// 初始化 AES 密码块
+	block, err := aes.NewCipher(pwdKey)
+	if err != nil {
+		PrintError("gcmDecryptFile", err)
+		return err
+	}
+
+	// 初始化 GCM 模式
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		PrintError("gcmDecryptFile", err)
+		return err
+	}
+
+	// 读取 nonce（加密时写入的前 12 字节）
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(srcFile, nonce); err != nil {
+		PrintError("gcmDecryptFile", err)
+		return err
+	}
+
+	// 预分配缓冲区
+	AesChunkSize := 128 << 10
+	buf := make([]byte, AesChunkSize+gcm.Overhead())
+	plainBuf := make([]byte, AesChunkSize)
+
+	// 流式解密
+	for {
+		// 读取加密块
+		n, err := srcFile.Read(buf)
+		if n > 0 {
+			// GCM 解密（无内存拷贝，自带完整性校验）
+			plainBuf, err := gcm.Open(plainBuf[:0], nonce, buf[:n], nil)
+			if err != nil {
+				PrintError("gcmDecryptFile", err)
+				return err
+			}
+			// 写入解密数据
+			if _, err := dstFile.Write(plainBuf); err != nil {
+				return err
+			}
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	dstFile.Close()
+	srcFile.Close()
+
+	err = os.Rename(dstTemp, dstPath)
+	return nil
 }
