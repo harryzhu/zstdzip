@@ -6,38 +6,37 @@ compress and decompress via ZSTD with zip format, can keep file's permission and
 ## Performance:
 ### Much Faster than `7-Zip`
 
-#### 数据量： `200GB` (`86,929` .mp4 files)
+#### 数据量：`380,457`个 `.png` 文件，共`319GB`
 
 
-压缩方式 | 压缩时间(越短越好) | 解压缩时间[PCIe 4.0] | 解压缩时间[PCIe 3.0]
---------|-----------------|-----------------------------|--------
-zstdzip(默认)       | 2m 46s       | 1m 48s  |  3m 34s
-zstdzip(--serial)  | 11m 8s       |  | 
-7zip               | 22m 34s      |  | 
+压缩方式                      | 压缩时间(越短越好)   | 解压缩时间(越短越好)
+-----------------------------|-------------------|-------------------
+zstdzip(默认：串行)            |   27m 26s         | 5m 28s  
+zstdzip(并行：--serial=false) | **6m 31s**        | **4m 4s** 
+7zip ( .zip)                 |   12m 16s         |  
 
 `zstdzip`: 
 
-* compress（压缩） : `2 minutes 46 seconds`; 
-* decompress（解压缩）: `1 minutes 48 seconds`(宏碁GM7（PCIe 4.0）) 或者 `3 minutes 34 seconds`（SanDisk（PCIe 3.0））; 
+* compress（压缩） : 并行需要 `6 minutes 31 seconds`，串行需要 `27 minutes 26 seconds`; 
+* decompress（解压缩）: 并行 `4 minutes 4 seconds`(宏碁GM7（PCIe 4.0），SanDisk（PCIe 3.0）) 或者 串行 `5 minutes 28 seconds`; 
 * 在并行模式下，压缩/解压缩 的速度完全依赖于数据所在SSD的写入速度;
-* 在传统模式下（添加 `--serial`参数，开启串行模式）, `11 minutes 8 seconds`（PCIe 4.0）;
+
 
 `7-Zip`: 
 
-* compress same data above: `22 minutes 34 seconds`，在 PCIe 4.0 和 3.0上速度几乎一样;
-* 采用“不压缩、仅存储”选项: `4 minutes 43 seconds`(PCIe 4.0)
+* compress same data above: `12 minutes 16 seconds`;
 
 
-#### 数据量：`101,478`个 .txt 文件，共`53.08GB`
+#### 数据量：`56,572`个 .txt 文件，共`21GB`
 
 压缩方式 | 时间(越短越好) | 压缩后大小(越小越好)
 --------|--------------|--------
-zstdzip(默认)       |  **1m 14s**       | 7.37GB
-zstdzip(--level=2) |  1m 15s       | 6.79GB
-zstdzip(--level=3) |  2m 19s       | 6.58GB
-zstdzip(--serial)  |  3m 21s       | 7.37GB
-7zip ( .7z)        | 14m 46s      | **4.89GB**
-7zip ( .zip)       |  5m 17s      | 10.76GB
+zstdzip(并行)       |  **7s**    | 2.41GB
+zstdzip(--level=2) |  13s       | 2.20GB
+zstdzip(--level=3) |  34s       | 2.12GB
+zstdzip(--serial)  |  37s       | 2.41GB
+7zip ( .7z)        | 249s       | **1.46GB**
+7zip ( .zip)       |  68s       | 3.56GB
 
 
 ## Usage:

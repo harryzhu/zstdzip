@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/klauspost/compress/zstd"
@@ -14,7 +13,6 @@ import (
 
 func taskSendFileToChan() error {
 	var nameInZip string
-	fextReg := regexp.MustCompile("(?i)" + RegExt)
 	SourceInfo, err := os.Stat(Source)
 	if err != nil {
 		PrintError("taskSendFileToChan: os.Stat", err)
@@ -195,6 +193,10 @@ func taskDecompressFile(sourceFile string) error {
 			continue
 		} else {
 			MakeDirs(dstDir)
+		}
+
+		if isFileMatched(dstPath, finfo, fextReg) == false {
+			continue
 		}
 
 		dstFile, err := os.Create(dstPath)
