@@ -89,6 +89,4 @@ func init() {
 	unzipCmd.Flags().Int64Var(&MinSizeMB, "min-size-mb", -1, "i.e.: 16 means 16MB, 16*1024*1024")
 	unzipCmd.Flags().Int64Var(&MaxSizeMB, "max-size-mb", -1, "i.e.: 32 means 32MB, 32*1024*1024")
 	//
-	unzipCmd.Flags().BoolVar(&IsIgnoreEmptyDir, "ignore-empty-dir", true, "ignore empty folder")
-	unzipCmd.Flags().BoolVar(&IsIgnoreDotFile, "ignore-dot-file", false, "ignore files start with dot(.), i.e.: .DS_Store .Thumb")
 }

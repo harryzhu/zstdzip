@@ -15,14 +15,13 @@ var zipCmd = &cobra.Command{
 	Short: "--source=/path/to/document-dir --target=/path/to/file.zstd.zip",
 	Long: `optional args: 
 	--password= : if password is not empty, will enable encrypt;
-	--threads=8 : 
 	--level=0|1|2|3 : 0 is fastest and lowest compression, 3 is slowest but highest compression;
 	--serial: compress files one-by-one into a single archive, will disable parallel feature, 
 	          better performance for HDD, but slower in SSD;
 	files FILTER:
 	--ignore-dot-file: ;
 	--ignore-empty-dir: ;
-	--regext: regular pattern(Case Insensitive);
+	--ext: regular pattern(Case Insensitive);
 	--min-age: ignore files if file's last-modified-time is earlier than --min-age;
 	--max-age: ignore files if file's last-modified-time is newer than --max-age;
 	--min-size-mb: ignore files if file's size is less than --min-size-mb;
@@ -115,6 +114,7 @@ func init() {
 	zipCmd.Flags().IntVar(&Level, "level", 1, "compress level: 0 | 1 | 2 | 3 ")
 	//
 	zipCmd.Flags().BoolVar(&IsIgnoreDotFile, "ignore-dot-file", true, "ignore files start with dot(.), i.e.: .DS_Store .Thumb")
+	zipCmd.Flags().BoolVar(&IsIgnoreEmptyDir, "ignore-empty-dir", true, "ignore empty folder")
 	//
 	zipCmd.Flags().StringVar(&RegExt, "ext", "", "regex pattern of file extension(Case Insensitive). i.e.: .(mp4|txt|png)")
 	//

@@ -15,7 +15,7 @@ import (
 // hashCmd represents the hash command
 var hashCmd = &cobra.Command{
 	Use:   "hash",
-	Short: "--sum=blake3 | xxhash | md5 | sha1 | sha256 --source=path/of/file.txt",
+	Short: "--sum=blake3 | xxhash | md5 | sha1 | sha256 --source=path/of/file.txt --target=path/to/save",
 	Long:  ``,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		positionalArgs(args)
