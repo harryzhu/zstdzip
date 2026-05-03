@@ -24,8 +24,8 @@ var zipCmd = &cobra.Command{
 	--ext: regular pattern(Case Insensitive);
 	--min-age: ignore files if file's last-modified-time is earlier than --min-age;
 	--max-age: ignore files if file's last-modified-time is newer than --max-age;
-	--min-size-mb: ignore files if file's size is less than --min-size-mb;
-	--max-size-mb: ignore files if file's size is greater than --max-size-mb;`,
+	--min-size: ignore files if file's size is less than --min-size;
+	--max-size: ignore files if file's size is greater than --max-size;`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		positionalArgs(args)
 		//
@@ -121,7 +121,7 @@ func init() {
 	zipCmd.Flags().StringVar(&MinAge, "min-age", "", "format: 2023-12-03,15:09:08, means 2023-12-03 15:09:08")
 	zipCmd.Flags().StringVar(&MaxAge, "max-age", "", "format: 2023-12-25,23:59:59, means 2023-12-25 23:59:59")
 	//
-	zipCmd.Flags().Int64Var(&MinSizeMB, "min-size-mb", -1, "i.e.: 16 means 16MB, 16*1024*1024")
-	zipCmd.Flags().Int64Var(&MaxSizeMB, "max-size-mb", -1, "i.e.: 32 means 32MB, 32*1024*1024")
+	zipCmd.Flags().Int64Var(&MinSize, "min-size", -1, "i.e.: 16 means 16 Bytes")
+	zipCmd.Flags().Int64Var(&MaxSize, "max-size", -1, "i.e.: 2048 means 2KB")
 
 }

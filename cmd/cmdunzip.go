@@ -18,8 +18,8 @@ var unzipCmd = &cobra.Command{
 	--serial : decompress files one-by-one;
 	--min-age= :, 
 	--max-age= :, 
-	--min-size-mb= :, 
-	--max-size-mb= :, 
+	--min-size= :, 
+	--max-size= :, 
 	--ext= : regular pattern(Case Insensitive)`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		positionalArgs(args)
@@ -86,7 +86,7 @@ func init() {
 	unzipCmd.Flags().StringVar(&MinAge, "min-age", "", "format: 2023-12-03,15:09:08, means 2023-12-03 15:09:08")
 	unzipCmd.Flags().StringVar(&MaxAge, "max-age", "", "format: 2023-12-25,23:59:59, means 2023-12-25 23:59:59")
 	//
-	unzipCmd.Flags().Int64Var(&MinSizeMB, "min-size-mb", -1, "i.e.: 16 means 16MB, 16*1024*1024")
-	unzipCmd.Flags().Int64Var(&MaxSizeMB, "max-size-mb", -1, "i.e.: 32 means 32MB, 32*1024*1024")
+	unzipCmd.Flags().Int64Var(&MinSize, "min-size", -1, "i.e.: 16 means 16 Bytes")
+	unzipCmd.Flags().Int64Var(&MaxSize, "max-size", -1, "i.e.: 2048 means 2KB")
 	//
 }

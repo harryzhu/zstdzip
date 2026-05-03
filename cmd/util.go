@@ -75,11 +75,11 @@ func isFileMatched(fpath string, finfo os.FileInfo, fextreg *regexp.Regexp) bool
 		}
 	}
 
-	if MaxSizeMB != -1 && (finfo.Size() > (MaxSizeMB << 20)) {
+	if MaxSize != -1 && (finfo.Size() > MaxSize) {
 		return false
 	}
 
-	if MinSizeMB != -1 && (finfo.Size() < (MinSizeMB << 20)) {
+	if MinSize != -1 && (finfo.Size() < MinSize) {
 		return false
 	}
 

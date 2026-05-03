@@ -25,11 +25,11 @@ var (
 	IsSerial         bool
 	IsDebug          bool
 	//
-	RegExt    string
-	MinAge    string
-	MaxAge    string
-	MaxSizeMB int64
-	MinSizeMB int64
+	RegExt  string
+	MinAge  string
+	MaxAge  string
+	MaxSize int64
+	MinSize int64
 )
 
 const (
