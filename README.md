@@ -33,7 +33,7 @@ zstdzip(并行：--serial=false) | **6m 31s**        | **4m 4s**
 --------|--------------|--------
 zstdzip(并行)       |  **7s**    | 2.41GB
 zstdzip(--level=2) |  13s       | 2.20GB
-zstdzip(--level=3) |  34s       | 2.12GB
+zstdzip(--level=3) |  34s       | **2.12GB**
 zstdzip(--serial)  |  37s       | 2.41GB
 7zip ( .7z)        | 249s       | **1.46GB**
 7zip ( .zip)       |  68s       | 3.56GB
